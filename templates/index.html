@@ -1,0 +1,2947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Automation Console</title>
+<style>
+    :root {
+        --bg: #0f172a;
+        --panel: #1e293b;
+        --panel-light: #273449;
+        --accent: #38bdf8;
+        --accent-dark: #0284c7;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --success: #22c55e;
+        --error: #f87171;
+        --warn: #fbbf24;
+        --border: #334155;
+        --ai: #a78bfa;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: linear-gradient(135deg, #0f172a, #111827);
+        color: var(--text);
+        min-height: 100vh;
+    }
+    .wrap { max-width: 1360px; margin: 0 auto; padding: 20px 24px 40px; }
+
+    /* ---------- Header + top nav ---------- */
+    header.app-header { margin-bottom: 16px; }
+    header.app-header h1 {
+        margin: 0 0 4px 0;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    header.app-header p { margin: 0 0 14px 0; color: var(--muted); font-size: 0.9rem; }
+    .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+    }
+    .badge.ok { background: rgba(34,197,94,0.15); color: var(--success); border: 1px solid var(--success); }
+    .badge.warn { background: rgba(251,191,36,0.15); color: var(--warn); border: 1px solid var(--warn); }
+    .badge.ai { background: rgba(167,139,250,0.15); color: var(--ai); border: 1px solid var(--ai); }
+
+    .main-nav {
+        display: flex;
+        gap: 6px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .main-nav button {
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        padding: 10px 16px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .main-nav button:hover { color: var(--text); }
+    .main-nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .nav-count {
+        background: var(--panel-light);
+        border-radius: 10px;
+        padding: 1px 7px;
+        font-size: 0.7rem;
+        color: var(--muted);
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ---------- Shared panel/form styles ---------- */
+    .grid { display: grid; grid-template-columns: 0.95fr 1.15fr; gap: 20px; align-items: start; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+    .grid > .panel:last-child { position: sticky; top: 16px; }
+    @media (max-width: 980px) { .grid > .panel:last-child { position: static; } }
+
+    .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+    }
+    .panel h2 {
+        margin-top: 0;
+        font-size: 1.05rem;
+        color: var(--accent);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 10px;
+    }
+    .panel h3 { font-size: 0.9rem; color: var(--text); margin: 14px 0 8px 0; }
+
+    label { display: block; margin-bottom: 4px; font-size: 0.85rem; color: var(--muted); }
+    .field { margin-bottom: 14px; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    input[type="text"], input[type="password"], input[type="number"], textarea, select {
+        width: 100%;
+        padding: 9px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--panel-light);
+        color: var(--text);
+        font-size: 0.9rem;
+        font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 90px; font-family: "Consolas", "Courier New", monospace; }
+    input:focus, textarea:focus, select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(56,189,248,0.25);
+    }
+    .hint { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
+    .sample-download-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 4px 0 12px 0;
+        flex-wrap: wrap;
+    }
+    .sample-link {
+        font-size: 0.75rem;
+        color: var(--accent);
+        text-decoration: none;
+        border-bottom: 1px dashed var(--accent);
+    }
+    .sample-link:hover { color: #7dd3fc; border-bottom-style: solid; }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; margin: 10px 0 16px 0; }
+    .checkbox-row input { width: 16px; height: 16px; flex-shrink: 0; }
+    .checkbox-row label { margin: 0; color: var(--text); font-size: 0.9rem; }
+
+    /* ---------- Collapsible sections (auth method, jump host, diff options) ---------- */
+    .collapsible {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 14px;
+        overflow: hidden;
+    }
+    .collapsible-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 14px;
+        background: var(--panel-light);
+        cursor: pointer;
+        font-size: 0.88rem;
+        font-weight: 600;
+    }
+    .collapsible-header .chevron { transition: transform 0.15s ease; color: var(--muted); }
+    .collapsible.open .chevron { transform: rotate(90deg); }
+    .collapsible-body { padding: 14px; display: none; }
+    .collapsible.open .collapsible-body { display: block; }
+
+    .auth-method-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+    .auth-method-tabs button {
+        flex: 1;
+        background: var(--panel-light);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 7px 10px;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        cursor: pointer;
+    }
+    .auth-method-tabs button.active { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,0.08); }
+    .auth-method-panel { display: none; }
+    .auth-method-panel.active { display: block; }
+
+    /* ---------- Device list ---------- */
+    #deviceList { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .device-card-row {
+        background: var(--panel-light);
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+    }
+    .device-card-row.has-own-creds { border-color: var(--ai); }
+    .device-row {
+        display: grid;
+        grid-template-columns: 1fr 90px 34px 34px;
+        gap: 8px;
+        align-items: center;
+    }
+    .device-row input { margin: 0; }
+    .device-row .cred-toggle-btn {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        height: 34px;
+    }
+    .device-row .cred-toggle-btn.active { color: var(--ai); border-color: var(--ai); }
+    .device-cred-fields {
+        display: none;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px dashed var(--border);
+    }
+    .device-cred-fields.open { display: grid; }
+    .device-cred-fields input { margin: 0; font-size: 0.82rem; }
+    .device-cred-fields .hint { grid-column: 1 / -1; margin: 0; }
+    .device-row .remove-btn {
+        background: rgba(248,113,113,0.15);
+        border: 1px solid var(--error);
+        color: var(--error);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        height: 34px;
+    }
+    .device-row .remove-btn:hover { background: rgba(248,113,113,0.3); }
+    .device-actions { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .ghost-btn {
+        background: transparent;
+        border: 1px dashed var(--accent);
+        color: var(--accent);
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        flex: 1;
+        min-width: 120px;
+    }
+    .ghost-btn:hover { background: rgba(56,189,248,0.1); }
+    .ghost-btn.secondary { border-style: solid; border-color: var(--border); color: var(--muted); }
+    .ghost-btn.ai { border-color: var(--ai); color: var(--ai); }
+    .ghost-btn.ai:hover { background: rgba(167,139,250,0.12); }
+
+    /* ---------- Command box + autocomplete ---------- */
+    .cmd-box-wrap { position: relative; }
+    .commands-mode-label {
+        display: inline-block;
+        font-size: 0.7rem;
+        color: var(--muted);
+        background: var(--panel-light);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 1px 8px;
+        margin: 4px 0 6px 0;
+    }
+    .commands-mode-label.config {
+        color: var(--warn);
+        border-color: var(--warn);
+        background: rgba(251,191,36,0.08);
+    }
+    .autocomplete-panel {
+        position: absolute;
+        z-index: 20;
+        left: 0; right: 0;
+        top: 100%;
+        margin-top: 4px;
+        background: var(--panel-light);
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        max-height: 320px;
+        overflow-y: auto;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        display: none;
+    }
+    .autocomplete-panel.open { display: block; }
+    .autocomplete-panel.config-mode-list { border-color: var(--warn); }
+    .autocomplete-panel .ac-mode-banner {
+        position: sticky;
+        top: 0;
+        background: rgba(251,191,36,0.15);
+        color: var(--warn);
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--warn);
+        z-index: 1;
+    }
+    .autocomplete-panel .ac-category {
+        padding: 6px 10px 2px 10px;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        border-top: 1px solid var(--border);
+    }
+    .autocomplete-panel .ac-category:first-child { border-top: none; }
+    .autocomplete-panel .ac-item {
+        padding: 6px 12px;
+        font-size: 0.83rem;
+        font-family: "Consolas", "Courier New", monospace;
+        cursor: pointer;
+        color: var(--text);
+    }
+    .autocomplete-panel .ac-item:hover { background: rgba(56,189,248,0.15); color: var(--accent); }
+    .autocomplete-panel.config-mode-list .ac-item:hover { background: rgba(251,191,36,0.15); color: var(--warn); }
+
+    button#runBtn {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        color: #06202f;
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: opacity 0.15s ease, transform 0.05s ease;
+    }
+    button#runBtn:hover { opacity: 0.92; }
+    button#runBtn:active { transform: scale(0.99); }
+    button#runBtn:disabled { background: #475569; color: #cbd5e1; cursor: not-allowed; }
+
+    button#stopBtn {
+        width: 100%;
+        padding: 10px;
+        margin-top: 8px;
+        border: 1px solid var(--error);
+        border-radius: 8px;
+        background: rgba(248,113,113,0.12);
+        color: var(--error);
+        font-weight: 700;
+        font-size: 0.88rem;
+        cursor: pointer;
+        display: none;
+    }
+    button#stopBtn:hover { background: rgba(248,113,113,0.22); }
+    button#stopBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    button.ai-btn {
+        border: none;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #a78bfa, #7c3aed);
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 9px 12px;
+        cursor: pointer;
+    }
+    button.ai-btn:hover { opacity: 0.92; }
+    button.ai-btn:disabled { background: #475569; color: #cbd5e1; cursor: not-allowed; }
+
+    #statusLine { margin-top: 10px; font-size: 0.85rem; min-height: 18px; }
+    #statusLine.error { color: var(--error); }
+    #statusLine.success { color: var(--success); }
+    #statusLine.info { color: var(--muted); }
+
+    /* ---------- Output tabs ---------- */
+    .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .tab-btn {
+        background: var(--panel-light);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 7px 14px;
+        border-radius: 8px 8px 0 0;
+        cursor: pointer;
+        font-size: 0.83rem;
+    }
+    .tab-btn.active { background: #05070d; color: var(--accent); border-bottom-color: #05070d; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    #output {
+        background: #05070d;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+        height: calc(100vh - 300px);
+        min-height: 520px;
+        max-height: 1100px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: "Consolas", "Courier New", monospace;
+        font-size: 0.82rem;
+        line-height: 1.5;
+        color: #d1fae5;
+        resize: vertical;
+    }
+    #output .line-error { color: var(--error); }
+    #output .line-warn { color: var(--warn); }
+    #output .line-info { color: #7dd3fc; }
+    #output .line-summary { color: #facc15; }
+    #output .placeholder, .empty-placeholder { color: var(--muted); font-style: italic; }
+
+    #reportView {
+        background: #05070d;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+        height: calc(100vh - 300px);
+        min-height: 520px;
+        max-height: 1100px;
+        overflow-y: auto;
+        font-size: 0.85rem;
+        resize: vertical;
+    }
+
+    /* Fullscreen expand mode for the output/report panel */
+    .panel.output-expanded {
+        position: fixed;
+        inset: 16px;
+        z-index: 200;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    }
+    .panel.output-expanded #output,
+    .panel.output-expanded #reportView {
+        height: calc(100vh - 220px);
+        max-height: none;
+    }
+    .expand-overlay-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.55);
+        z-index: 190;
+    }
+    .expand-overlay-backdrop.open { display: block; }
+    .device-card {
+        background: var(--panel-light);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+    .device-card .dc-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 700;
+        margin-bottom: 8px;
+        font-size: 0.92rem;
+    }
+    .status-pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        margin-left: 6px;
+    }
+    .status-pill.OK { background: rgba(34,197,94,0.18); color: var(--success); }
+    .status-pill.FAILED { background: rgba(248,113,113,0.18); color: var(--error); }
+    .status-pill.SKIPPED, .status-pill.other { background: rgba(148,163,184,0.18); color: var(--muted); }
+
+    .tag-chip {
+        display: inline-block;
+        background: rgba(56,189,248,0.12);
+        color: var(--accent);
+        border: 1px solid rgba(56,189,248,0.3);
+        border-radius: 10px;
+        padding: 1px 8px;
+        font-size: 0.72rem;
+        margin: 1px;
+    }
+    .fav-star {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.1rem;
+        color: var(--muted);
+        padding: 0;
+        line-height: 1;
+    }
+    .fav-star.active { color: var(--warn); }
+    .fav-star:hover { color: var(--warn); }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 18px;
+    }
+    .stat-card {
+        background: var(--panel-light);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+    }
+    .stat-card .stat-value { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+    .stat-card .stat-value.error-value { color: var(--error); }
+    .stat-card .stat-value.success-value { color: var(--success); }
+    .stat-card .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 2px; }
+
+    .history-filter-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+    }
+    .history-filter-row input[type="text"], .history-filter-row select { width: auto; min-width: 180px; }
+
+    .trend-chart-panel {
+        background: var(--panel-light);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 18px;
+    }
+    .small-select {
+        width: auto;
+        padding: 4px 8px;
+        font-size: 0.78rem;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 6px;
+    }
+    .trend-bar-chart { display: flex; align-items: flex-end; gap: 3px; height: 130px; padding-top: 10px; }
+    .trend-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; }
+    .trend-bar-stack { width: 100%; max-width: 26px; display: flex; flex-direction: column-reverse; justify-content: flex-start; }
+    .trend-bar-ok { background: var(--success); border-radius: 2px 2px 0 0; width: 100%; }
+    .trend-bar-fail { background: var(--error); width: 100%; }
+    .trend-bar-col:hover .trend-bar-ok, .trend-bar-col:hover .trend-bar-fail { opacity: 0.75; }
+    .trend-bar-label { font-size: 0.62rem; color: var(--muted); margin-top: 6px; white-space: nowrap; transform: rotate(0deg); }
+    .trend-bar-empty { width: 100%; max-width: 26px; height: 2px; background: var(--border); }
+    .trend-legend { display: flex; gap: 16px; margin-top: 10px; font-size: 0.75rem; color: var(--muted); }
+    .trend-legend span { display: flex; align-items: center; gap: 5px; }
+    .trend-legend .dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+    .dc-row { display: flex; gap: 14px; font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; flex-wrap: wrap; }
+    .dc-cmd { margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px; }
+    .dc-cmd .cmd-line { font-family: "Consolas", monospace; color: var(--accent); font-size: 0.8rem; }
+    .dc-cmd pre {
+        background: #0b0f1a;
+        padding: 8px;
+        border-radius: 6px;
+        margin: 4px 0 10px 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 0.78rem;
+        color: #cbd5e1;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .diff-block { margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px; }
+    .diff-line { font-family: "Consolas", monospace; font-size: 0.78rem; padding: 1px 6px; white-space: pre-wrap; }
+    .diff-line.add { color: var(--success); background: rgba(34,197,94,0.08); }
+    .diff-line.remove { color: var(--error); background: rgba(248,113,113,0.08); }
+
+    .ai-result-box {
+        background: #05070d;
+        border: 1px solid var(--ai);
+        border-radius: 10px;
+        padding: 14px;
+        min-height: 120px;
+        max-height: 400px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        font-size: 0.88rem;
+        color: #ede9fe;
+        margin-top: 10px;
+    }
+
+    .output-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; flex-wrap: wrap;}
+    .output-toolbar h2 { margin: 0; border: none; padding: 0; }
+    .toolbar-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .small-btn {
+        background: var(--panel-light);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        cursor: pointer;
+    }
+    .small-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .small-btn.danger:hover { border-color: var(--error); color: var(--error); }
+
+    /* ---------- Data tables (inventories / history / schedules) ---------- */
+    table.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.data-table th {
+        text-align: left;
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+    }
+    table.data-table td {
+        padding: 10px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+    }
+    table.data-table tr:last-child td { border-bottom: none; }
+    table.data-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .toggle-switch { position: relative; display: inline-block; width: 38px; height: 20px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+        position: absolute; cursor: pointer; inset: 0;
+        background-color: #475569; transition: .2s; border-radius: 20px;
+    }
+    .toggle-slider:before {
+        position: absolute; content: "";
+        height: 14px; width: 14px; left: 3px; bottom: 3px;
+        background-color: white; transition: .2s; border-radius: 50%;
+    }
+    .toggle-switch input:checked + .toggle-slider { background-color: var(--success); }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); }
+
+    .modal-overlay {
+        display: none;
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 22px;
+        max-width: 480px;
+        width: 100%;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    .modal-box h2 { margin-top: 0; color: var(--accent); font-size: 1.1rem; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+    .btn-primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        border: none; color: #06202f; font-weight: 700;
+        padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 0.88rem;
+    }
+    .btn-secondary {
+        background: var(--panel-light); border: 1px solid var(--border); color: var(--text);
+        padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 0.88rem;
+    }
+
+    footer { margin-top: 22px; font-size: 0.78rem; color: var(--muted); text-align: center; }
+    code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; }
+    .section-intro { color: var(--muted); font-size: 0.88rem; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <header class="app-header">
+        <h1>🔌 Network Automation Console
+            {% if paramiko_available %}
+                <span class="badge ok">SSH ready</span>
+            {% else %}
+                <span class="badge warn">SSH disabled</span>
+            {% endif %}
+            {% if encryption_available %}
+                <span class="badge ok">🔒 Credential encryption ready</span>
+            {% else %}
+                <span class="badge warn">🔓 Credential encryption unavailable</span>
+            {% endif %}
+            {% if netmiko_available %}
+                <span class="badge ok" title="Netmiko is installed and available in this environment">Netmiko ready</span>
+            {% endif %}
+            <span class="badge ai">✨ AI-assisted</span>
+        </h1>
+        <p>Run checks against multiple devices with SSH key / jump-host auth, config-mode + diff/dry-run, saved inventories, run history, and scheduling — all local.</p>
+
+        <nav class="main-nav">
+            <button type="button" class="nav-btn active" data-view="runView">▶ Run</button>
+            <button type="button" class="nav-btn" data-view="inventoriesView">📋 Inventories <span class="nav-count" id="invCount">0</span></button>
+            <button type="button" class="nav-btn" data-view="historyView">🕓 History <span class="nav-count" id="historyCount">0</span></button>
+            <button type="button" class="nav-btn" data-view="schedulesView">⏱ Schedules <span class="nav-count" id="schedCount">0</span></button>
+        </nav>
+    </header>
+
+    <!-- ============================== RUN VIEW ============================== -->
+    <div class="view active" id="runView">
+        <div class="grid">
+            <!-- LEFT: FORM -->
+            <div class="panel">
+                <h2>Devices</h2>
+                <div id="deviceList"></div>
+                <div class="device-actions">
+                    <button type="button" class="ghost-btn" id="addDeviceBtn">+ Add Device</button>
+                    <button type="button" class="ghost-btn secondary" id="bulkAddBtn">Paste List</button>
+                </div>
+                <div class="device-actions">
+                    <button type="button" class="ghost-btn secondary" id="uploadDevicesBtn">⬆ Upload CSV/TXT</button>
+                    <input type="file" id="devicesFileInput" accept=".csv,.txt,text/csv,text/plain" style="display:none;">
+                </div>
+                <div class="sample-download-row">
+                    <span class="hint" style="margin:0;">Sample files:</span>
+                    <a href="#" id="downloadDevicesSampleCsv" class="sample-link">devices_sample.csv</a>
+                    <a href="#" id="downloadDevicesSampleTxt" class="sample-link">devices_sample.txt</a>
+                </div>
+                <div class="device-actions" style="margin-bottom:16px;">
+                    <button type="button" class="ghost-btn secondary" id="loadInventoryBtn">📂 Load Inventory</button>
+                    <button type="button" class="ghost-btn secondary" id="saveInventoryBtn">💾 Save as Inventory</button>
+                </div>
+                <div class="hint" style="margin-bottom:16px;">
+                    Up to {{ max_devices }} devices per run. "Paste List" adds many at once, one per line: <code>host[:port]</code>.
+                    CSV/TXT upload optionally accepts <code>username</code>/<code>password</code> columns for devices that need different logins (click the 🔑 on a device row to set/view these manually).
+                    <span style="color:var(--warn);">⚠ Credentials in an uploaded file are plaintext on your disk — delete the file after use, or leave those columns blank and use the shared login above.</span>
+                </div>
+
+                <h2>Credentials</h2>
+                <div class="field">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="e.g. admin">
+                </div>
+
+                <div class="auth-method-tabs">
+                    <button type="button" class="auth-tab-btn active" data-auth="password">Password</button>
+                    <button type="button" class="auth-tab-btn" data-auth="key">SSH Private Key</button>
+                </div>
+                <div class="auth-method-panel active" id="authPanelPassword">
+                    <div class="field">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="••••••••">
+                    </div>
+                </div>
+                <div class="auth-method-panel" id="authPanelKey">
+                    <div class="field">
+                        <label for="private_key_text">Private Key (PEM/OpenSSH format)</label>
+                        <textarea id="private_key_text" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----" style="min-height:80px; font-size:0.75rem;"></textarea>
+                        <input type="file" id="privateKeyFileInput" accept=".pem,.key,text/plain" style="display:none;">
+                    </div>
+                    <div class="device-actions" style="margin-bottom:10px;">
+                        <button type="button" class="small-btn" id="uploadKeyBtn">⬆ Upload key file</button>
+                    </div>
+                    <div class="field">
+                        <label for="private_key_passphrase">Key Passphrase (if encrypted, optional)</label>
+                        <input type="password" id="private_key_passphrase" placeholder="Leave blank if key has no passphrase">
+                    </div>
+                </div>
+
+                <div class="collapsible" id="jumpHostCollapsible">
+                    <div class="collapsible-header" id="jumpHostToggle">
+                        <span>🔀 Jump Host / Bastion (optional)</span>
+                        <span class="chevron">▶</span>
+                    </div>
+                    <div class="collapsible-body">
+                        <div class="hint" style="margin-bottom:10px;">Tunnel the SSH connection through a bastion host before reaching each device.</div>
+                        <div class="row-2">
+                            <div class="field">
+                                <label for="jump_host">Jump Host</label>
+                                <input type="text" id="jump_host" placeholder="bastion.example.com">
+                            </div>
+                            <div class="field">
+                                <label for="jump_port">Port</label>
+                                <input type="number" id="jump_port" value="22" min="1" max="65535">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="jump_username">Jump Host Username</label>
+                            <input type="text" id="jump_username" placeholder="e.g. bastionuser">
+                        </div>
+                        <div class="field">
+                            <label for="jump_password">Jump Host Password</label>
+                            <input type="password" id="jump_password" placeholder="••••••••">
+                        </div>
+                        <div class="hint">SSH-key auth for the jump host isn't in this quick panel — use the same private key field above if both hops share a key, otherwise password auth is recommended for the bastion.</div>
+                    </div>
+                </div>
+
+                <h2>Options</h2>
+                <div class="row-2">
+                    <div class="field">
+                        <label for="timeout">Timeout (seconds)</label>
+                        <input type="number" id="timeout" name="timeout" value="10" min="1" max="60">
+                    </div>
+                    <div class="field">
+                        <label for="max_workers">Max concurrent devices</label>
+                        <input type="number" id="max_workers" name="max_workers" value="5" min="1" max="{{ max_workers_limit }}">
+                    </div>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="parallel" name="parallel">
+                    <label for="parallel">Run devices in parallel</label>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="run_ssh" name="run_ssh">
+                    <label for="run_ssh">Also execute commands over SSH on every device</label>
+                </div>
+
+                <div class="field">
+                    <label for="vendor">Device platform (autocomplete &amp; config mode)</label>
+                    <select id="vendor">
+                        {% for v in vendors %}
+                        <option value="{{ v.id }}">{{ v.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field cmd-box-wrap">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <label for="commands" style="margin-bottom:0;">Commands to run (one per line)</label>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="small-btn" id="uploadCommandsBtn">⬆ Upload .txt</button>
+                            <button type="button" class="small-btn" id="commandSuggestBtn">📖 Browse</button>
+                        </div>
+                    </div>
+                    <span id="commandsModeLabel" class="commands-mode-label">📄 Show / exec commands</span>
+                    <input type="file" id="commandsFileInput" accept=".txt,.cfg,.conf,text/plain" style="display:none;">
+                    <textarea id="commands" name="commands" placeholder="show version&#10;show ip interface brief" autocomplete="off"></textarea>
+                    <div id="autocompletePanel" class="autocomplete-panel"></div>
+                    <div class="sample-download-row">
+                        <span class="hint" style="margin:0;">Sample file:</span>
+                        <a href="#" id="downloadCommandsSample" class="sample-link">commands_sample.txt</a>
+                    </div>
+                    <div class="hint">Only used if SSH execution is checked above. Suggestions automatically switch to configuration-mode commands when "Enable Configuration Mode" is checked below.</div>
+                </div>
+
+                <button type="button" class="ghost-btn ai" id="aiSuggestBtn" style="margin-bottom:14px; width:100%;">✨ Ask AI to suggest commands for a task</button>
+
+                <div class="config-mode-box" style="border:1px solid var(--warn); background: rgba(251,191,36,0.06); border-radius:10px; padding:12px 14px; margin-bottom:16px;">
+                    <div class="checkbox-row" style="margin:0 0 8px 0;">
+                        <input type="checkbox" id="config_mode" name="config_mode">
+                        <label for="config_mode"><b>⚠ Enable Configuration Mode</b> (commands will CHANGE device configuration)</label>
+                    </div>
+                    <div id="configModeDetails" style="display:none;">
+                        <div class="hint" style="margin-bottom:10px;">
+                            Automatically sends the platform's config-mode entry/exit commands. Your commands can include sub-mode navigation like <code>interface GigabitEthernet0/1</code> or <code>exit</code>.
+                        </div>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="save_config" name="save_config">
+                            <label for="save_config">Save configuration to startup/NVRAM after applying</label>
+                        </div>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="show_diff" name="show_diff">
+                            <label for="show_diff">Show before/after config diff (captures full config before &amp; after)</label>
+                        </div>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="dry_run" name="dry_run">
+                            <label for="dry_run">Dry-run (Junos only — validates without applying; other platforms apply immediately, no vendor-agnostic dry run exists)</label>
+                        </div>
+                        <div class="warning-banner" style="display:flex; align-items:flex-start; gap:10px; background: rgba(248,113,113,0.12); border:1px solid var(--error); border-radius:8px; padding:10px 12px; margin-top:10px;">
+                            <input type="checkbox" id="confirm_config" name="confirm_config" style="margin-top:3px; width:16px; height:16px; flex-shrink:0;">
+                            <label for="confirm_config" style="color:var(--error); font-size:0.83rem; margin:0;">
+                                I understand these commands will make real configuration changes to the device(s) listed above, I have reviewed them, and I accept responsibility for the outcome.
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="automationForm" autocomplete="off">
+                    <button type="submit" id="runBtn">▶ Run Automation</button>
+                    <button type="button" id="stopBtn">■ Stop Run</button>
+                    <button type="button" class="ghost-btn" id="saveAsTaskBtn" style="width:100%; margin-top:10px;">💾 Save as Scheduled Task</button>
+                    <div id="statusLine" class="info"></div>
+                </form>
+            </div>
+
+            <!-- RIGHT: OUTPUT / REPORT / AI -->
+            <div class="panel" id="outputPanel">
+                <div class="tabs">
+                    <button type="button" class="tab-btn active" data-tab="liveTab">Live Log</button>
+                    <button type="button" class="tab-btn" data-tab="reportTab">Structured Report</button>
+                    <button type="button" class="tab-btn" data-tab="aiTab">✨ AI Assistant</button>
+                    <button type="button" class="tab-btn expand-btn" id="expandOutputBtn" title="Expand to fullscreen" style="margin-left:auto;">⛶ Expand</button>
+                </div>
+
+                <div class="tab-content active" id="liveTab">
+                    <div class="output-toolbar">
+                        <h2 style="border:none;padding:0;">Live Output</h2>
+                        <div class="toolbar-btns">
+                            <button type="button" class="small-btn" id="clearBtn">Clear</button>
+                            <button type="button" class="small-btn" id="exportTxtBtn">⬇ .txt</button>
+                        </div>
+                    </div>
+                    <div id="output"><span class="placeholder">Output will appear here once you run a task...</span></div>
+                </div>
+
+                <div class="tab-content" id="reportTab">
+                    <div class="output-toolbar">
+                        <h2 style="border:none;padding:0;">Structured Report</h2>
+                        <div class="toolbar-btns">
+                            <button type="button" class="small-btn" id="exportHtmlBtn">⬇ .html</button>
+                            <button type="button" class="small-btn" id="exportJsonBtn">⬇ .json</button>
+                            <button type="button" class="small-btn" id="exportCsvBtn">⬇ .csv</button>
+                        </div>
+                    </div>
+                    <div id="reportView"><span class="placeholder" style="color:#94a3b8;font-style:italic;">Run a task to see a structured, per-device report here.</span></div>
+                </div>
+
+                <div class="tab-content" id="aiTab">
+                    <div id="aiPanel">
+                        <h2 style="border:none;padding:0;">✨ AI Assistant</h2>
+                        <div class="hint" style="margin-bottom:12px;">
+                            Connect to OpenRouter, NVIDIA NIM, or a local Ollama install. API keys are used only for the current request and never stored.
+                        </div>
+                        <div class="row-2">
+                            <div class="field">
+                                <label for="aiProvider">Provider</label>
+                                <select id="aiProvider">
+                                    <option value="openrouter">OpenRouter (cloud)</option>
+                                    <option value="nim">NVIDIA NIM (cloud)</option>
+                                    <option value="ollama">Ollama (local)</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="aiModel">Model</label>
+                                <input type="text" id="aiModel" placeholder="e.g. openai/gpt-4o-mini">
+                            </div>
+                        </div>
+                        <div class="field" id="aiKeyField">
+                            <label for="aiApiKey">API Key</label>
+                            <input type="password" id="aiApiKey" placeholder="sk-... (not required for Ollama)">
+                        </div>
+                        <div class="field">
+                            <label for="aiBaseUrl">Base URL (optional override)</label>
+                            <input type="text" id="aiBaseUrl" placeholder="Leave blank to use provider default">
+                            <div class="hint" id="aiUrlHint"></div>
+                        </div>
+
+                        <h3>1. Suggest commands for a task</h3>
+                        <div class="field">
+                            <textarea id="aiDescription" placeholder="e.g. Check for interface errors and CRC issues on all uplinks"></textarea>
+                        </div>
+                        <button type="button" class="ai-btn" id="aiSuggestRunBtn">✨ Suggest Commands</button>
+                        <button type="button" class="small-btn" id="aiInsertBtn" style="display:none; margin-left:8px;">➕ Insert into commands box</button>
+
+                        <h3>2. Analyze the last run's output</h3>
+                        <div class="hint" style="margin-bottom:8px;">Uses whatever is currently in the Live Log tab.</div>
+                        <button type="button" class="ai-btn" id="aiAnalyzeBtn">✨ Analyze Last Run</button>
+
+                        <div id="aiResultBox" class="ai-result-box" style="display:none;"></div>
+                        <div id="aiStatusLine" class="hint" style="margin-top:8px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== INVENTORIES VIEW ============================== -->
+    <div class="view" id="inventoriesView">
+        <div class="panel">
+            <h2>Saved Device Inventories</h2>
+            <div class="section-intro">Save a device list + shared settings for quick reuse. Passwords/keys are only stored if you check "remember credentials" when saving, and are encrypted at rest.</div>
+            <div class="field" style="max-width:360px;">
+                <input type="text" id="inventorySearchInput" placeholder="🔍 Search by name, tag, or note...">
+            </div>
+            <div id="inventoriesTableWrap"><span class="empty-placeholder">Loading...</span></div>
+        </div>
+    </div>
+
+    <!-- ============================== HISTORY VIEW ============================== -->
+    <div class="view" id="historyView">
+        <div class="panel">
+            <h2>Run History</h2>
+            <div class="section-intro">The last 200 runs are kept locally (SQLite). Click "View" to load a run's structured report back into the Run tab.</div>
+
+            <div id="historyStatsRow" class="stats-row"></div>
+
+            <div class="trend-chart-panel">
+                <div class="output-toolbar" style="margin-bottom:8px;">
+                    <h2 style="border:none;padding:0;font-size:0.95rem;">📈 Run Trend</h2>
+                    <select id="trendDaysSelect" class="small-select">
+                        <option value="7">Last 7 days</option>
+                        <option value="14" selected>Last 14 days</option>
+                        <option value="30">Last 30 days</option>
+                    </select>
+                </div>
+                <div id="trendChartWrap"><span class="empty-placeholder">Loading...</span></div>
+            </div>
+
+            <div class="history-filter-row">
+                <input type="text" id="historySearchInput" placeholder="🔍 Search by label...">
+                <select id="historyTriggerFilter">
+                    <option value="">All triggers</option>
+                    <option value="manual">Manual only</option>
+                    <option value="schedule">Scheduled only</option>
+                </select>
+                <label class="checkbox-row" style="margin:0;">
+                    <input type="checkbox" id="historyFailedOnlyCheckbox">
+                    <span style="font-size:0.85rem; color:var(--text);">Only show failed runs</span>
+                </label>
+                <button type="button" class="small-btn danger" id="clearHistoryBtn" style="margin-left:auto;">🗑 Clear All History</button>
+            </div>
+
+            <div id="historyTableWrap"><span class="empty-placeholder">Loading...</span></div>
+        </div>
+    </div>
+
+    <!-- ============================== SCHEDULES VIEW ============================== -->
+    <div class="view" id="schedulesView">
+        <div class="panel">
+            <h2>Scheduled Jobs</h2>
+            <div class="section-intro">
+                Scheduled jobs run automatically in the background at a fixed interval. For safety, <b>schedules are restricted to read-only checks</b> (ping / port / show commands) — configuration-mode changes always require a human to click "Run Now" on the Run tab.
+            </div>
+            <button type="button" class="ghost-btn" id="newScheduleBtn" style="max-width:220px; margin-bottom:16px;">+ New Schedule</button>
+            <div id="schedulesTableWrap"><span class="empty-placeholder">Loading...</span></div>
+        </div>
+    </div>
+
+    <footer>
+        Runs entirely on your local machine via the Flask app on <code>localhost:5000</code>. Data is stored locally in <code>automation_console.db</code>; nothing leaves your computer unless you use an AI feature.
+    </footer>
+</div>
+
+<div class="expand-overlay-backdrop" id="expandOverlayBackdrop"></div>
+
+<!-- ============================== MODALS ============================== -->
+<div class="modal-overlay" id="saveInventoryModal">
+    <div class="modal-box">
+        <h2>💾 Save Inventory</h2>
+        <div class="field">
+            <label for="inventoryNameInput">Inventory name</label>
+            <input type="text" id="inventoryNameInput" placeholder="e.g. Branch Office Switches">
+        </div>
+        <div class="field">
+            <label for="inventoryTagsInput">Tags (comma-separated, optional)</label>
+            <input type="text" id="inventoryTagsInput" placeholder="e.g. prod, core, branch-1">
+        </div>
+        <div class="field">
+            <label for="inventoryNotesInput">Notes (optional)</label>
+            <textarea id="inventoryNotesInput" placeholder="e.g. Core switches for HQ, contact John for access" style="min-height:60px;"></textarea>
+        </div>
+        <div class="checkbox-row">
+            <input type="checkbox" id="rememberSecretsCheckbox">
+            <label for="rememberSecretsCheckbox">Remember password / key (encrypted at rest)</label>
+        </div>
+        <div class="hint" id="rememberSecretsHint"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="cancelSaveInventoryBtn">Cancel</button>
+            <button type="button" class="btn-primary" id="confirmSaveInventoryBtn">Save</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="duplicateInventoryModal">
+    <div class="modal-box">
+        <h2>📑 Duplicate Inventory</h2>
+        <div class="field">
+            <label for="duplicateInventoryNameInput">New inventory name</label>
+            <input type="text" id="duplicateInventoryNameInput" placeholder="e.g. Branch Office Switches (copy)">
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="cancelDuplicateInventoryBtn">Cancel</button>
+            <button type="button" class="btn-primary" id="confirmDuplicateInventoryBtn">Duplicate</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="editInventoryModal">
+    <div class="modal-box" style="max-width:620px;">
+        <h2>✏ Edit Inventory</h2>
+        <div class="field">
+            <label for="editInventoryNameInput">Inventory name</label>
+            <input type="text" id="editInventoryNameInput" placeholder="e.g. Branch Office Switches">
+        </div>
+        <div class="field">
+            <label for="editInventoryTagsInput">Tags (comma-separated, optional)</label>
+            <input type="text" id="editInventoryTagsInput" placeholder="e.g. prod, core, branch-1">
+        </div>
+        <div class="field">
+            <label for="editInventoryNotesInput">Notes (optional)</label>
+            <textarea id="editInventoryNotesInput" style="min-height:50px;"></textarea>
+        </div>
+        <div class="field">
+            <label>Devices</label>
+            <div id="editInventoryDeviceList" style="max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
+            <div class="device-actions" style="margin-top:8px; margin-bottom:0;">
+                <button type="button" class="ghost-btn secondary" id="editInventoryAddDeviceBtn">+ Add Device</button>
+            </div>
+        </div>
+        <div class="hint" style="margin:8px 0;">Credentials are edited on the Run tab (Load this inventory, change credentials, then save again) — this editor covers name, tags, notes, and the device list.</div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="cancelEditInventoryBtn">Cancel</button>
+            <button type="button" class="btn-primary" id="confirmEditInventoryBtn">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="newScheduleModal">
+    <div class="modal-box">
+        <h2>⏱ New Schedule</h2>
+        <div class="hint" style="margin-bottom:10px;">Uses the devices, credentials, and commands currently set on the Run tab (read-only checks only — config mode is never scheduled).</div>
+        <div class="field">
+            <label for="scheduleNameInput">Schedule name</label>
+            <input type="text" id="scheduleNameInput" placeholder="e.g. Every 15 min health check">
+        </div>
+        <div class="field">
+            <label for="scheduleIntervalInput">Run every (minutes)</label>
+            <input type="number" id="scheduleIntervalInput" value="15" min="5" max="10080">
+        </div>
+        <div class="checkbox-row">
+            <input type="checkbox" id="scheduleNotifyCheckbox">
+            <label for="scheduleNotifyCheckbox">Log a console alert if any device fails on a scheduled run</label>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="cancelNewScheduleBtn">Cancel</button>
+            <button type="button" class="btn-primary" id="confirmNewScheduleBtn">Create</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="editScheduleIntervalModal">
+    <div class="modal-box">
+        <h2>✏ Edit Schedule Interval</h2>
+        <div class="field">
+            <label for="editScheduleIntervalInput">Run every (minutes)</label>
+            <input type="number" id="editScheduleIntervalInput" value="15" min="5" max="10080">
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="cancelEditScheduleIntervalBtn">Cancel</button>
+            <button type="button" class="btn-primary" id="confirmEditScheduleIntervalBtn">Save</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="scheduleHistoryModal">
+    <div class="modal-box" style="max-width:700px;">
+        <h2 id="scheduleHistoryTitle">🕓 Run History</h2>
+        <div id="scheduleHistoryBody" style="max-height:50vh; overflow-y:auto;"><span class="empty-placeholder">Loading...</span></div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="closeScheduleHistoryBtn">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const MAX_DEVICES = {{ max_devices }};
+const ENCRYPTION_AVAILABLE = {{ 'true' if encryption_available else 'false' }};
+
+// =======================================================================
+// Top-level navigation
+// =======================================================================
+document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.view).classList.add('active');
+        if (btn.dataset.view === 'inventoriesView') loadInventories();
+        if (btn.dataset.view === 'historyView') { loadHistory(); loadTrendChart(); }
+        if (btn.dataset.view === 'schedulesView') loadSchedules();
+    });
+});
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// =======================================================================
+// Device list management
+// =======================================================================
+const deviceList = document.getElementById('deviceList');
+const addDeviceBtn = document.getElementById('addDeviceBtn');
+const bulkAddBtn = document.getElementById('bulkAddBtn');
+let deviceCount = 0;
+
+function addDeviceRow(host = '', port = 22, deviceUsername = '', devicePassword = '') {
+    if (deviceList.children.length >= MAX_DEVICES) {
+        setStatus(`Maximum of ${MAX_DEVICES} devices reached.`, 'error');
+        return;
+    }
+    deviceCount += 1;
+    const hasOwnCreds = !!(deviceUsername || devicePassword);
+    const card = document.createElement('div');
+    card.className = 'device-card-row' + (hasOwnCreds ? ' has-own-creds' : '');
+    card.innerHTML = `
+        <div class="device-row">
+            <input type="text" class="device-host" placeholder="Hostname or IP, e.g. 192.168.1.${deviceCount}" value="${escapeHtml(host)}">
+            <input type="number" class="device-port" placeholder="Port" min="1" max="65535" value="${port}">
+            <button type="button" class="cred-toggle-btn ${hasOwnCreds ? 'active' : ''}" title="Set a different username/password for just this device">🔑</button>
+            <button type="button" class="remove-btn" title="Remove device">✕</button>
+        </div>
+        <div class="device-cred-fields ${hasOwnCreds ? 'open' : ''}">
+            <input type="text" class="device-username" placeholder="Username (this device only)" value="${escapeHtml(deviceUsername)}">
+            <input type="password" class="device-password" placeholder="Password (this device only)" value="${escapeHtml(devicePassword)}">
+            <div class="hint">Overrides the shared credentials for this device only. Leave both blank to use the shared login above.</div>
+        </div>
+    `;
+    const credFields = card.querySelector('.device-cred-fields');
+    const credToggleBtn = card.querySelector('.cred-toggle-btn');
+    credToggleBtn.addEventListener('click', () => {
+        credFields.classList.toggle('open');
+        credToggleBtn.classList.toggle('active', credFields.classList.contains('open'));
+    });
+    card.querySelector('.remove-btn').addEventListener('click', () => card.remove());
+    deviceList.appendChild(card);
+}
+
+addDeviceBtn.addEventListener('click', () => addDeviceRow());
+
+bulkAddBtn.addEventListener('click', () => {
+    const text = window.prompt(
+        'Paste one device per line, format: host or host:port\n\nExample:\n192.168.1.1\n192.168.1.2:2222\nswitch1.lab.local'
+    );
+    if (!text) return;
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
+        if (deviceList.children.length >= MAX_DEVICES) {
+            setStatus(`Only the first ${MAX_DEVICES} devices were added (limit reached).`, 'warn');
+            break;
+        }
+        const [host, port] = line.split(':').map(s => s && s.trim());
+        addDeviceRow(host || '', port ? Number(port) : 22);
+    }
+});
+
+addDeviceRow('192.168.1.10', 22);
+addDeviceRow('192.168.1.11', 22);
+
+function collectDevices() {
+    const cards = Array.from(deviceList.querySelectorAll('.device-card-row'));
+    return cards.map(card => {
+        const device = {
+            host: card.querySelector('.device-host').value.trim(),
+            port: card.querySelector('.device-port').value,
+        };
+        const devUsername = card.querySelector('.device-username').value.trim();
+        const devPassword = card.querySelector('.device-password').value;
+        if (devUsername) device.username = devUsername;
+        if (devPassword) device.password = devPassword;
+        return device;
+    }).filter(d => d.host !== '');
+}
+
+function setDevices(devices) {
+    deviceList.innerHTML = '';
+    (devices || []).forEach(d => addDeviceRow(d.host, d.port, d.username || '', d.password || ''));
+    if (deviceList.children.length === 0) addDeviceRow();
+}
+
+// =======================================================================
+// Auth method tabs (password vs SSH key)
+// =======================================================================
+document.querySelectorAll('.auth-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.auth-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.auth-method-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('authPanel' + (btn.dataset.auth === 'key' ? 'Key' : 'Password')).classList.add('active');
+    });
+});
+
+document.getElementById('uploadKeyBtn').addEventListener('click', () => document.getElementById('privateKeyFileInput').click());
+document.getElementById('privateKeyFileInput').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { document.getElementById('private_key_text').value = String(reader.result || '').trim(); setStatus(`Loaded key from "${file.name}".`, 'success'); };
+    reader.onerror = () => setStatus(`Could not read file "${file.name}".`, 'error');
+    reader.readAsText(file);
+});
+
+function currentAuthMethod() {
+    return document.querySelector('.auth-tab-btn.active').dataset.auth;
+}
+
+// =======================================================================
+// Collapsible jump-host section
+// =======================================================================
+document.getElementById('jumpHostToggle').addEventListener('click', () => {
+    document.getElementById('jumpHostCollapsible').classList.toggle('open');
+});
+
+// =======================================================================
+// Command autocomplete / library browser
+// =======================================================================
+const vendorSelect = document.getElementById('vendor');
+const commandsBox = document.getElementById('commands');
+const autocompletePanel = document.getElementById('autocompletePanel');
+const commandSuggestBtn = document.getElementById('commandSuggestBtn');
+let commandLibraryCache = {};
+
+async function loadCommandLibrary(vendor) {
+    if (commandLibraryCache[vendor]) return commandLibraryCache[vendor];
+    try {
+        const res = await fetch('/command-suggestions?vendor=' + encodeURIComponent(vendor));
+        if (!res.ok) return null;
+        const data = await res.json();
+        commandLibraryCache[vendor] = data;
+        return data;
+    } catch (err) { console.error(err); return null; }
+}
+
+function currentLineText() {
+    const value = commandsBox.value;
+    const pos = commandsBox.selectionStart;
+    const upToCursor = value.slice(0, pos);
+    const lastNewline = upToCursor.lastIndexOf('\n');
+    return upToCursor.slice(lastNewline + 1);
+}
+
+function replaceCurrentLine(newLine) {
+    const value = commandsBox.value;
+    const pos = commandsBox.selectionStart;
+    const upToCursor = value.slice(0, pos);
+    const afterCursor = value.slice(pos);
+    const lastNewline = upToCursor.lastIndexOf('\n');
+    const before = value.slice(0, lastNewline + 1);
+    const restOfLineAfterCursor = afterCursor.split('\n')[0];
+    const remainderAfterLine = afterCursor.slice(restOfLineAfterCursor.length);
+    commandsBox.value = before + newLine + '\n' + remainderAfterLine.replace(/^\n/, '');
+    const newPos = (before + newLine + '\n').length;
+    commandsBox.setSelectionRange(newPos, newPos);
+    commandsBox.focus();
+}
+
+// Returns the right category set (show/exec vs config-mode) depending on
+// whether "Enable Configuration Mode" is currently checked, so autocomplete
+// and "Browse" always suggest commands appropriate for what the user is
+// about to do instead of always showing read-only "show" commands.
+function activeCategoriesFrom(lib) {
+    const isConfigMode = document.getElementById('config_mode').checked;
+    if (isConfigMode && lib.config_categories && Object.keys(lib.config_categories).length > 0) {
+        return { categories: lib.config_categories, isConfig: true };
+    }
+    return { categories: lib.categories, isConfig: false };
+}
+
+function renderAutocomplete(categories, filterText, showAll, isConfig) {
+    autocompletePanel.innerHTML = '';
+    autocompletePanel.classList.toggle('config-mode-list', !!isConfig);
+    const term = (filterText || '').toLowerCase();
+    let anyMatch = false;
+
+    if (isConfig) {
+        const banner = document.createElement('div');
+        banner.className = 'ac-mode-banner';
+        banner.textContent = '⚙ Showing CONFIGURATION-MODE commands (will change device config)';
+        autocompletePanel.appendChild(banner);
+    }
+
+    for (const [category, cmds] of Object.entries(categories)) {
+        const matches = showAll ? cmds : cmds.filter(c => c.toLowerCase().includes(term));
+        if (matches.length === 0) continue;
+        anyMatch = true;
+        const catEl = document.createElement('div');
+        catEl.className = 'ac-category';
+        catEl.textContent = category;
+        autocompletePanel.appendChild(catEl);
+        for (const cmd of matches) {
+            const item = document.createElement('div');
+            item.className = 'ac-item';
+            item.textContent = cmd;
+            item.addEventListener('mousedown', (e) => { e.preventDefault(); replaceCurrentLine(cmd); closeAutocomplete(); });
+            autocompletePanel.appendChild(item);
+        }
+    }
+    if (!anyMatch) {
+        const empty = document.createElement('div');
+        empty.className = 'ac-item';
+        empty.style.cssText = 'color:#94a3b8;font-style:italic;';
+        empty.textContent = 'No matching commands. Try "Browse" for the full list.';
+        autocompletePanel.appendChild(empty);
+    }
+    autocompletePanel.classList.add('open');
+}
+function closeAutocomplete() { autocompletePanel.classList.remove('open'); }
+
+function refreshCommandBoxModeLabel() {
+    const isConfigMode = document.getElementById('config_mode').checked;
+    const labelEl = document.getElementById('commandsModeLabel');
+    if (!labelEl) return;
+    if (isConfigMode) {
+        labelEl.textContent = '⚙ Configuration-mode commands';
+        labelEl.className = 'commands-mode-label config';
+    } else {
+        labelEl.textContent = '📄 Show / exec commands';
+        labelEl.className = 'commands-mode-label';
+    }
+}
+
+commandsBox.addEventListener('input', async () => {
+    const lib = await loadCommandLibrary(vendorSelect.value);
+    if (!lib) return;
+    const term = currentLineText().trim();
+    if (term.length === 0) { closeAutocomplete(); return; }
+    const { categories, isConfig } = activeCategoriesFrom(lib);
+    renderAutocomplete(categories, term, false, isConfig);
+});
+commandsBox.addEventListener('blur', () => setTimeout(closeAutocomplete, 150));
+commandSuggestBtn.addEventListener('click', async () => {
+    const lib = await loadCommandLibrary(vendorSelect.value);
+    if (!lib) { setStatus('Could not load command library for this platform.', 'error'); return; }
+    const { categories, isConfig } = activeCategoriesFrom(lib);
+    renderAutocomplete(categories, '', true, isConfig);
+    commandsBox.focus();
+});
+vendorSelect.addEventListener('change', () => closeAutocomplete());
+
+// =======================================================================
+// Upload commands from a .txt file
+// =======================================================================
+const uploadCommandsBtn = document.getElementById('uploadCommandsBtn');
+const commandsFileInput = document.getElementById('commandsFileInput');
+const MAX_UPLOAD_SIZE_BYTES = 512 * 1024;
+
+uploadCommandsBtn.addEventListener('click', () => commandsFileInput.click());
+commandsFileInput.addEventListener('change', () => {
+    const file = commandsFileInput.files && commandsFileInput.files[0];
+    commandsFileInput.value = '';
+    if (!file) return;
+    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+        setStatus(`File is too large (${(file.size / 1024).toFixed(0)} KB). Max allowed is ${MAX_UPLOAD_SIZE_BYTES / 1024} KB.`, 'error');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+        const text = String(reader.result || '');
+        const lines = text.split(/\r\n|\r|\n/).map(l => l.trim()).filter(l => l !== '' && !l.startsWith('!') && !l.startsWith('#'));
+        if (lines.length === 0) { setStatus('The uploaded file did not contain any usable command lines.', 'error'); return; }
+        const existing = commandsBox.value.trim();
+        commandsBox.value = existing ? existing + '\n' + lines.join('\n') : lines.join('\n');
+        setStatus(`Loaded ${lines.length} command(s) from "${file.name}".`, 'success');
+    };
+    reader.onerror = () => setStatus(`Could not read file "${file.name}".`, 'error');
+    reader.readAsText(file);
+});
+
+// Sample commands file, generated client-side so it's always in sync with
+// the app (no separate static file to keep updated).
+document.getElementById('downloadCommandsSample').addEventListener('click', (e) => {
+    e.preventDefault();
+    const sample = [
+        '! Sample commands file for the Network Automation Console',
+        '! Lines starting with "!" or "#" are treated as comments and ignored.',
+        '! One command per line -- these run in order, in a single SSH session per device.',
+        '',
+        'show version',
+        'show ip interface brief',
+        'show vlan brief',
+        'show interfaces status',
+        'show running-config',
+    ].join('\n');
+    downloadBlob('commands_sample.txt', sample, 'text/plain');
+});
+
+// =======================================================================
+// Upload devices from a CSV or TXT file
+// =======================================================================
+const uploadDevicesBtn = document.getElementById('uploadDevicesBtn');
+const devicesFileInput = document.getElementById('devicesFileInput');
+
+uploadDevicesBtn.addEventListener('click', () => devicesFileInput.click());
+
+devicesFileInput.addEventListener('change', () => {
+    const file = devicesFileInput.files && devicesFileInput.files[0];
+    devicesFileInput.value = '';
+    if (!file) return;
+    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+        setStatus(`File is too large (${(file.size / 1024).toFixed(0)} KB). Max allowed is ${MAX_UPLOAD_SIZE_BYTES / 1024} KB.`, 'error');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+        const text = String(reader.result || '');
+        const isCsv = file.name.toLowerCase().endsWith('.csv');
+        const parsed = isCsv ? parseDevicesCsv(text) : parseDevicesTxt(text);
+        if (parsed.devices.length === 0) {
+            setStatus(`No usable devices found in "${file.name}".${parsed.errors.length ? ' ' + parsed.errors[0] : ''}`, 'error');
+            return;
+        }
+        const remainingSlots = MAX_DEVICES - deviceList.children.length;
+        const toAdd = parsed.devices.slice(0, Math.max(remainingSlots, 0));
+        for (const d of toAdd) addDeviceRow(d.host, d.port, d.username || '', d.password || '');
+        let msg = `Loaded ${toAdd.length} device(s) from "${file.name}".`;
+        if (parsed.credentialsIncluded) msg += ' Per-device credentials were included and applied.';
+        if (parsed.devices.length > toAdd.length) msg += ` (${parsed.devices.length - toAdd.length} skipped — device limit reached)`;
+        if (parsed.errors.length) msg += ` ${parsed.errors.length} row(s) had issues and were skipped.`;
+        setStatus(msg, parsed.errors.length ? 'warn' : 'success');
+    };
+    reader.onerror = () => setStatus(`Could not read file "${file.name}".`, 'error');
+    reader.readAsText(file);
+});
+
+// Very small CSV line splitter -- good enough for the simple "host,port"
+// shape this app expects; handles basic quoted fields so a hostname or
+// note containing a comma in quotes doesn't break column alignment.
+function splitCsvLine(line) {
+    const cells = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQuotes = !inQuotes; continue; }
+        if (ch === ',' && !inQuotes) { cells.push(current); current = ''; continue; }
+        current += ch;
+    }
+    cells.push(current);
+    return cells.map(c => c.trim());
+}
+
+const HOST_COLUMN_NAMES = ['host', 'hostname', 'ip', 'ip_address', 'device'];
+const USERNAME_COLUMN_NAMES = ['username', 'user', 'login'];
+const PASSWORD_COLUMN_NAMES = ['password', 'pass', 'pwd'];
+
+function parseDevicesCsv(text) {
+    const lines = text.split(/\r\n|\r|\n/).map(l => l.trim()).filter(l => l !== '' && !l.startsWith('#'));
+    const devices = [];
+    const errors = [];
+    if (lines.length === 0) return { devices, errors };
+
+    // Detect an optional header row (e.g. "host,port" or "host,port,username,password").
+    let startIdx = 0;
+    let credentialsIncluded = false;
+    const firstCells = splitCsvLine(lines[0]).map(c => c.toLowerCase());
+    const looksLikeHeader = firstCells.some(c => HOST_COLUMN_NAMES.includes(c));
+    let hostColIdx = 0, portColIdx = 1, userColIdx = -1, passColIdx = -1;
+    if (looksLikeHeader) {
+        startIdx = 1;
+        hostColIdx = firstCells.findIndex(c => HOST_COLUMN_NAMES.includes(c));
+        portColIdx = firstCells.findIndex(c => c === 'port');
+        userColIdx = firstCells.findIndex(c => USERNAME_COLUMN_NAMES.includes(c));
+        passColIdx = firstCells.findIndex(c => PASSWORD_COLUMN_NAMES.includes(c));
+        credentialsIncluded = userColIdx >= 0 || passColIdx >= 0;
+    } else {
+        // Headerless: assume host,port[,username,password] column order.
+        userColIdx = 2;
+        passColIdx = 3;
+    }
+
+    for (let i = startIdx; i < lines.length; i++) {
+        const cells = splitCsvLine(lines[i]);
+        const host = (cells[hostColIdx >= 0 ? hostColIdx : 0] || '').trim();
+        if (!host) { errors.push(`Row ${i + 1}: missing host.`); continue; }
+        let port = 22;
+        const portRaw = portColIdx >= 0 ? cells[portColIdx] : cells[1];
+        if (portRaw) {
+            const n = Number(portRaw);
+            if (Number.isFinite(n) && n >= 1 && n <= 65535) port = n;
+            else errors.push(`Row ${i + 1}: invalid port "${portRaw}", defaulted to 22.`);
+        }
+        const device = { host, port };
+        const username = (userColIdx >= 0 ? cells[userColIdx] : '') || '';
+        const password = (passColIdx >= 0 ? cells[passColIdx] : '') || '';
+        if (username.trim()) { device.username = username.trim(); credentialsIncluded = true; }
+        if (password.trim()) { device.password = password.trim(); credentialsIncluded = true; }
+        devices.push(device);
+    }
+    return { devices, errors, credentialsIncluded };
+}
+
+function parseDevicesTxt(text) {
+    const lines = text.split(/\r\n|\r|\n/).map(l => l.trim()).filter(l => l !== '' && !l.startsWith('#') && !l.startsWith('!'));
+    const devices = [];
+    const errors = [];
+    let credentialsIncluded = false;
+    for (const line of lines) {
+        // Format: host[:port[:username[:password]]]
+        const parts = line.split(':').map(s => (s || '').trim());
+        const hostRaw = parts[0];
+        if (!hostRaw) continue;
+        let port = 22;
+        if (parts[1]) {
+            const n = Number(parts[1]);
+            if (Number.isFinite(n) && n >= 1 && n <= 65535) port = n;
+            else errors.push(`"${line}": invalid port, defaulted to 22.`);
+        }
+        const device = { host: hostRaw, port };
+        if (parts[2]) { device.username = parts[2]; credentialsIncluded = true; }
+        if (parts[3]) { device.password = parts[3]; credentialsIncluded = true; }
+        devices.push(device);
+    }
+    return { devices, errors, credentialsIncluded };
+}
+
+document.getElementById('downloadDevicesSampleCsv').addEventListener('click', (e) => {
+    e.preventDefault();
+    const sample = [
+        '# username,password columns are OPTIONAL -- omit them (or leave cells blank)',
+        '# to use the shared credentials entered above instead.',
+        'host,port,username,password',
+        '192.168.1.10,22,admin,Sw1tchPass!',
+        '192.168.1.11,22,admin,Sw1tchPass!',
+        'switch-core-01.lab.local,22,,',
+        'router-edge-02.lab.local,2222,netadmin,R0uterPass!',
+    ].join('\n');
+    downloadBlob('devices_sample.csv', sample, 'text/csv');
+});
+
+document.getElementById('downloadDevicesSampleTxt').addEventListener('click', (e) => {
+    e.preventDefault();
+    const sample = [
+        '# Sample devices file for the Network Automation Console',
+        '# One device per line, format: host[:port[:username[:password]]]',
+        '# username/password are OPTIONAL -- omit them to use the shared',
+        '# credentials entered above instead. Lines starting with "#" are ignored.',
+        '',
+        '192.168.1.10',
+        '192.168.1.11:22',
+        'switch-core-01.lab.local:22',
+        'router-edge-02.lab.local:2222:netadmin:R0uterPass!',
+    ].join('\n');
+    downloadBlob('devices_sample.txt', sample, 'text/plain');
+});
+
+// =======================================================================
+// Config mode toggle
+// =======================================================================
+const configModeCheckbox = document.getElementById('config_mode');
+const configModeDetails = document.getElementById('configModeDetails');
+const saveConfigCheckbox = document.getElementById('save_config');
+const confirmConfigCheckbox = document.getElementById('confirm_config');
+const showDiffCheckbox = document.getElementById('show_diff');
+const dryRunCheckbox = document.getElementById('dry_run');
+
+configModeCheckbox.addEventListener('change', () => {
+    configModeDetails.style.display = configModeCheckbox.checked ? 'block' : 'none';
+    if (!configModeCheckbox.checked) {
+        saveConfigCheckbox.checked = false;
+        confirmConfigCheckbox.checked = false;
+        showDiffCheckbox.checked = false;
+        dryRunCheckbox.checked = false;
+    } else {
+        document.getElementById('run_ssh').checked = true;
+    }
+    refreshCommandBoxModeLabel();
+    closeAutocomplete();
+});
+refreshCommandBoxModeLabel();
+
+// =======================================================================
+// Output tabs (Live Log / Structured Report / AI)
+// =======================================================================
+document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn[data-tab]').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+});
+
+// Fullscreen expand/collapse for the output panel (Live Log / Structured
+// Report / AI Assistant), giving much more room to read long device output
+// without needing a separate window.
+const outputPanel = document.getElementById('outputPanel');
+const expandOutputBtn = document.getElementById('expandOutputBtn');
+const expandOverlayBackdrop = document.getElementById('expandOverlayBackdrop');
+
+function setOutputExpanded(expanded) {
+    outputPanel.classList.toggle('output-expanded', expanded);
+    expandOverlayBackdrop.classList.toggle('open', expanded);
+    expandOutputBtn.textContent = expanded ? '✕ Close' : '⛶ Expand';
+    expandOutputBtn.title = expanded ? 'Exit fullscreen' : 'Expand to fullscreen';
+    document.body.style.overflow = expanded ? 'hidden' : '';
+}
+
+expandOutputBtn.addEventListener('click', () => {
+    setOutputExpanded(!outputPanel.classList.contains('output-expanded'));
+});
+expandOverlayBackdrop.addEventListener('click', () => setOutputExpanded(false));
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && outputPanel.classList.contains('output-expanded')) setOutputExpanded(false);
+});
+
+// =======================================================================
+// Automation run + live output + structured report
+// =======================================================================
+const form = document.getElementById('automationForm');
+const runBtn = document.getElementById('runBtn');
+const stopBtn = document.getElementById('stopBtn');
+const output = document.getElementById('output');
+const reportView = document.getElementById('reportView');
+const statusLine = document.getElementById('statusLine');
+const clearBtn = document.getElementById('clearBtn');
+
+const STRUCTURED_START_MARKER = '@@STRUCTURED_REPORT_START@@';
+const STRUCTURED_END_MARKER = '@@STRUCTURED_REPORT_END@@';
+const RUN_ID_MARKER = '@@RUN_ID@@';
+
+let lastStructuredReport = null;
+let currentRunId = null;
+let runInFlight = false;
+
+function setStatus(message, type) {
+    statusLine.textContent = message || '';
+    statusLine.className = type || 'info';
+}
+
+function appendLine(text) {
+    if (output.querySelector('.placeholder')) output.innerHTML = '';
+    const span = document.createElement('span');
+    let cls = '';
+    if (/\[ERROR\]|\[FATAL ERROR\]/.test(text)) cls = 'line-error';
+    else if (/\[WARN\]/.test(text)) cls = 'line-warn';
+    else if (/\[INFO\]/.test(text)) cls = 'line-info';
+    else if (/^SUMMARY|^={5,}/.test(text.trim())) cls = 'line-summary';
+    if (cls) span.className = cls;
+    span.textContent = text;
+    output.appendChild(span);
+    output.scrollTop = output.scrollHeight;
+}
+
+clearBtn.addEventListener('click', () => {
+    output.innerHTML = '<span class="placeholder">Output cleared. Run a task to see new results...</span>';
+    setStatus('', 'info');
+});
+
+function statusClass(value) {
+    if (!value) return 'other';
+    if (value.startsWith('OK')) return 'OK';
+    if (value.startsWith('FAILED')) return 'FAILED';
+    if (value.startsWith('SKIPPED')) return 'SKIPPED';
+    return 'other';
+}
+
+function renderStructuredReport(report) {
+    reportView.innerHTML = '';
+    if (!report || !report.devices || report.devices.length === 0) {
+        reportView.innerHTML = '<span class="placeholder" style="color:#94a3b8;font-style:italic;">No structured data available.</span>';
+        return;
+    }
+
+    // Run-level summary panel (totals across all devices/commands).
+    const summaryBox = document.createElement('div');
+    summaryBox.className = 'device-card';
+    summaryBox.style.background = '#0b1220';
+    const m = report.meta || {};
+    let metaText = `Mode: ${m.mode} | Devices: ${m.total_devices} | SSH: ${m.run_ssh ? 'enabled' : 'disabled'}`;
+    if (m.config_mode) metaText += ` | ⚠ CONFIG MODE${m.save_config ? ' (saved)' : ' (not saved)'}`;
+    if (m.cancelled) metaText += ` | 🛑 CANCELLED`;
+    summaryBox.innerHTML = `
+        <div class="dc-title"><span>📊 Run Summary</span><span style="font-weight:400; font-size:0.78rem; color:var(--muted);">${escapeHtml(m.duration_seconds != null ? m.duration_seconds + 's total' : '')}</span></div>
+        <div class="dc-row">
+            <span>Devices OK: <span class="status-pill OK">${m.devices_ok ?? '—'}</span></span>
+            <span>Devices with issues: <span class="status-pill ${(m.devices_with_issues || 0) > 0 ? 'FAILED' : 'OK'}">${m.devices_with_issues ?? '—'}</span></span>
+            <span>Commands OK: <span class="status-pill OK">${m.total_commands_ok ?? 0}</span></span>
+            <span>Commands failed: <span class="status-pill ${(m.total_commands_failed || 0) > 0 ? 'FAILED' : 'OK'}">${m.total_commands_failed ?? 0}</span></span>
+        </div>
+        <div class="hint">${metaText} | Started: ${escapeHtml(m.started_at || '')} | Finished: ${escapeHtml(m.finished_at || '')}</div>
+    `;
+    reportView.appendChild(summaryBox);
+
+    for (const dev of report.devices) {
+        const card = document.createElement('div');
+        card.className = 'device-card';
+        const title = document.createElement('div');
+        title.className = 'dc-title';
+        const durationLabel = dev.duration_seconds != null ? `<span style="font-weight:400; font-size:0.78rem; color:var(--muted);">${dev.duration_seconds}s</span>` : '';
+        title.innerHTML = `<span>${escapeHtml(dev.host)}:${escapeHtml(dev.port)}</span>${durationLabel}`;
+        card.appendChild(title);
+
+        const row = document.createElement('div');
+        row.className = 'dc-row';
+        let rowHtml = `
+            <span>Ping: <span class="status-pill ${statusClass(dev.ping)}">${escapeHtml(dev.ping)}</span></span>
+            <span>TCP Port: <span class="status-pill ${statusClass(dev.tcp_port)}">${escapeHtml(dev.tcp_port)}</span></span>
+            <span>SSH: <span class="status-pill ${statusClass(dev.ssh)}">${escapeHtml(dev.ssh)}</span></span>
+        `;
+        if (dev.commands && dev.commands.length > 0) {
+            rowHtml += `<span>Commands: <span class="status-pill ${dev.commands_failed > 0 ? 'FAILED' : 'OK'}">${dev.commands_ok || 0} ok / ${dev.commands_failed || 0} failed</span></span>`;
+        }
+        row.innerHTML = rowHtml;
+        card.appendChild(row);
+
+        if (dev.ssh === 'SKIPPED (disabled)' && (!dev.commands || dev.commands.length === 0)) {
+            const note = document.createElement('div');
+            note.className = 'hint';
+            note.style.cssText = 'color:var(--warn); margin-top:6px;';
+            note.textContent = '⚠ SSH execution was disabled for this run — only ping/port checks ran. Check "execute commands over SSH" to run commands.';
+            card.appendChild(note);
+        }
+
+        if (dev.commands && dev.commands.length > 0) {
+            const cmdWrap = document.createElement('div');
+            cmdWrap.className = 'dc-cmd';
+            for (const c of dev.commands) {
+                const cmdLine = document.createElement('div');
+                cmdLine.className = 'cmd-line';
+                let prefix = c.auto ? '⚙ (auto) $ ' : '$ ';
+                let meta = [];
+                if (c.duration_seconds != null) meta.push(`${c.duration_seconds}s`);
+                if (c.output_lines) meta.push(`${c.output_lines} line(s)`);
+                const metaStr = meta.length ? ` (${meta.join(', ')})` : '';
+                cmdLine.textContent = prefix + c.command + (c.success ? '' : '  ⚠ FAILED') + metaStr;
+                if (c.auto) cmdLine.style.opacity = '0.7';
+                if (!c.success) cmdLine.style.color = 'var(--error)';
+                cmdWrap.appendChild(cmdLine);
+                const pre = document.createElement('pre');
+                pre.textContent = c.output || c.error || '(no output)';
+                cmdWrap.appendChild(pre);
+            }
+            card.appendChild(cmdWrap);
+        }
+
+        if (dev.config_diff && dev.config_diff.length > 0) {
+            const diffWrap = document.createElement('div');
+            diffWrap.className = 'diff-block';
+            const diffTitle = document.createElement('div');
+            diffTitle.className = 'cmd-line';
+            diffTitle.textContent = `📝 Configuration diff (${dev.config_diff.length} line(s) changed):`;
+            diffWrap.appendChild(diffTitle);
+            for (const d of dev.config_diff) {
+                const line = document.createElement('div');
+                line.className = 'diff-line ' + (d.type === '+' ? 'add' : 'remove');
+                line.textContent = d.type + ' ' + d.line;
+                diffWrap.appendChild(line);
+            }
+            card.appendChild(diffWrap);
+        }
+
+        reportView.appendChild(card);
+    }
+}
+
+function validateForm(devices, data) {
+    if (devices.length === 0) return 'Please add at least one device (host/IP).';
+    if (devices.length > MAX_DEVICES) return `Too many devices. Max allowed is ${MAX_DEVICES}.`;
+    for (const d of devices) {
+        const port = Number(d.port);
+        if (!Number.isFinite(port) || port < 1 || port > 65535) return `Device '${d.host}' has an invalid port. Must be 1-65535.`;
+    }
+    const timeout = Number(data.timeout);
+    if (!Number.isFinite(timeout) || timeout < 1 || timeout > 60) return 'Timeout must be a number between 1 and 60 seconds.';
+    const maxWorkers = Number(data.max_workers);
+    if (!Number.isFinite(maxWorkers) || maxWorkers < 1) return 'Max concurrent devices must be a positive number.';
+    if (data.run_ssh && !data.username.trim()) return 'Username is required when SSH command execution is enabled.';
+    if (data.run_ssh && !data.password && !data.private_key_text) return 'Provide a password or an SSH private key.';
+    if (data.config_mode && !data.run_ssh) return 'Config mode requires SSH execution to be enabled.';
+    if (data.config_mode && !data.commands.trim()) return 'Config mode is enabled but the commands box is empty.';
+    if (data.config_mode && !data.confirm_config) return 'Please check the confirmation box for config mode.';
+    if (data.jump_host && !data.jump_username) return 'A username is required for the jump host.';
+    if (data.jump_host && !data.jump_password) return 'A password is required for the jump host.';
+    return null;
+}
+
+function buildPayloadFromForm() {
+    const devices = collectDevices();
+    const authMethod = currentAuthMethod();
+    return {
+        devices: devices,
+        username: document.getElementById('username').value.trim(),
+        password: authMethod === 'password' ? document.getElementById('password').value : '',
+        private_key_text: authMethod === 'key' ? document.getElementById('private_key_text').value.trim() : '',
+        private_key_passphrase: authMethod === 'key' ? document.getElementById('private_key_passphrase').value : '',
+        jump_host: document.getElementById('jump_host').value.trim(),
+        jump_port: document.getElementById('jump_port').value,
+        jump_username: document.getElementById('jump_username').value.trim(),
+        jump_password: document.getElementById('jump_password').value,
+        timeout: document.getElementById('timeout').value,
+        max_workers: document.getElementById('max_workers').value,
+        parallel: document.getElementById('parallel').checked,
+        run_ssh: document.getElementById('run_ssh').checked,
+        commands: document.getElementById('commands').value,
+        vendor: vendorSelect.value,
+        config_mode: configModeCheckbox.checked,
+        save_config: saveConfigCheckbox.checked,
+        show_diff: showDiffCheckbox.checked,
+        dry_run: dryRunCheckbox.checked,
+        confirm_config: confirmConfigCheckbox.checked,
+    };
+}
+
+function setRunningUi(running) {
+    runInFlight = running;
+    runBtn.disabled = running;
+    runBtn.textContent = running ? '⏳ Running...' : '▶ Run Automation';
+    stopBtn.style.display = running ? 'block' : 'none';
+    stopBtn.disabled = false;
+    stopBtn.textContent = '■ Stop Run';
+}
+
+stopBtn.addEventListener('click', async () => {
+    if (!currentRunId) return;
+    stopBtn.disabled = true;
+    stopBtn.textContent = '⏳ Stopping...';
+    try {
+        const res = await fetch(`/cancel-run/${currentRunId}`, { method: 'POST' });
+        const json = await res.json().catch(() => ({}));
+        if (res.ok) {
+            setStatus('Stop requested — the run will halt after the current command/device finishes.', 'info');
+        } else {
+            setStatus(json.error || 'Could not stop the run (it may have already finished).', 'error');
+            stopBtn.disabled = false;
+            stopBtn.textContent = '■ Stop Run';
+        }
+    } catch (err) {
+        setStatus('Could not reach the backend to stop the run.', 'error');
+        stopBtn.disabled = false;
+        stopBtn.textContent = '■ Stop Run';
+    }
+});
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    closeAutocomplete();
+
+    const payload = buildPayloadFromForm();
+    const validationError = validateForm(payload.devices, payload);
+    if (validationError) { setStatus(validationError, 'error'); return; }
+
+    if (!payload.run_ssh && payload.commands.trim()) {
+        const proceed = window.confirm(
+            `You entered commands, but "execute commands over SSH" is NOT checked.\n\n` +
+            `Only ping and TCP port checks will run — your commands will be ignored.\n\n` +
+            `Click OK to continue anyway (ping/port checks only), or Cancel to go back and check that box.`
+        );
+        if (!proceed) { setStatus('Run cancelled — check "execute commands over SSH" to run your commands.', 'info'); return; }
+    }
+
+    if (payload.config_mode) {
+        const deviceListStr = payload.devices.map(d => `${d.host}:${d.port}`).join(', ');
+        const proceed = window.confirm(
+            `⚠ WARNING: Configuration mode is enabled.\n\n` +
+            `This will apply CONFIGURATION CHANGES to:\n${deviceListStr}\n\n` +
+            (payload.save_config ? `The configuration WILL be saved to startup/NVRAM.\n\n` : `Changes will NOT be explicitly saved.\n\n`) +
+            `Do you want to proceed?`
+        );
+        if (!proceed) { setStatus('Run cancelled — configuration changes were not sent.', 'info'); return; }
+    }
+
+    output.innerHTML = '';
+    reportView.innerHTML = '<span class="placeholder" style="color:#94a3b8;font-style:italic;">Running... report will appear here once the task finishes.</span>';
+    lastStructuredReport = null;
+    currentRunId = null;
+    setRunningUi(true);
+    setStatus(`Connecting to backend and starting task for ${payload.devices.length} device(s)...`, 'info');
+
+    try {
+        const res = await fetch('/run-script', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+            let message = 'Request failed with status ' + res.status;
+            try { const errJson = await res.json(); if (errJson && errJson.error) message = errJson.error; } catch (e) {}
+            appendLine('[ERROR] ' + message);
+            setStatus(message, 'error');
+            return;
+        }
+
+        if (!res.body) {
+            const text = await res.text();
+            processFullText(text);
+            setStatus('Task finished.', 'success');
+            return;
+        }
+
+        setStatus('Task running — streaming live output...', 'info');
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let fullText = '';
+        let inStructuredBlock = false;
+        let runIdCaptured = false;
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            fullText += chunk;
+            if (inStructuredBlock) continue;
+
+            buffer += chunk;
+
+            if (!runIdCaptured && buffer.includes('\n')) {
+                const firstNewline = buffer.indexOf('\n');
+                const firstLine = buffer.slice(0, firstNewline);
+                if (firstLine.startsWith(RUN_ID_MARKER)) {
+                    currentRunId = firstLine.slice(RUN_ID_MARKER.length).trim();
+                    buffer = buffer.slice(firstNewline + 1);
+                }
+                runIdCaptured = true;
+            }
+
+            if (buffer.includes(STRUCTURED_START_MARKER)) {
+                const before = buffer.slice(0, buffer.indexOf(STRUCTURED_START_MARKER));
+                before.split('\n').forEach((line, i, arr) => { if (i < arr.length - 1) appendLine(line + '\n'); });
+                inStructuredBlock = true;
+                buffer = '';
+                continue;
+            }
+
+            let newlineIndex;
+            while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+                const line = buffer.slice(0, newlineIndex + 1);
+                buffer = buffer.slice(newlineIndex + 1);
+                appendLine(line);
+            }
+        }
+        if (!inStructuredBlock && buffer) appendLine(buffer);
+
+        processFullText(fullText);
+        setStatus('Task finished.', 'success');
+    } catch (err) {
+        console.error(err);
+        appendLine('[ERROR] Could not reach the backend: ' + err.message + '\n');
+        setStatus('Could not reach the backend. Is app.py running on port 5000?', 'error');
+    } finally {
+        setRunningUi(false);
+        currentRunId = null;
+    }
+});
+
+function processFullText(fullText) {
+    let text = fullText;
+    const runIdIdx = text.indexOf(RUN_ID_MARKER);
+    if (runIdIdx === 0) {
+        const nl = text.indexOf('\n');
+        text = text.slice(nl + 1);
+    }
+    const startIdx = text.indexOf(STRUCTURED_START_MARKER);
+    const endIdx = text.indexOf(STRUCTURED_END_MARKER);
+    let humanText = text;
+    let jsonText = null;
+
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+        humanText = text.slice(0, startIdx);
+        jsonText = text.slice(startIdx + STRUCTURED_START_MARKER.length, endIdx).trim();
+    }
+
+    output.innerHTML = '';
+    humanText.split('\n').forEach(line => { if (line) appendLine(line + '\n'); });
+
+    if (jsonText) {
+        try {
+            lastStructuredReport = JSON.parse(jsonText);
+            renderStructuredReport(lastStructuredReport);
+        } catch (err) {
+            console.error('Failed to parse structured report JSON', err);
+            reportView.innerHTML = '<span class="placeholder" style="color:#f87171;">Failed to parse structured report data.</span>';
+        }
+    }
+}
+
+// =======================================================================
+// Exports
+// =======================================================================
+function downloadBlob(filename, content, mime) {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+function timestampForFilename() { return new Date().toISOString().replace(/[:.]/g, '-'); }
+
+document.getElementById('exportTxtBtn').addEventListener('click', () => {
+    const text = output.innerText || '';
+    if (!text.trim()) { setStatus('Nothing to export yet — run a task first.', 'error'); return; }
+    downloadBlob(`network_run_${timestampForFilename()}.txt`, text, 'text/plain');
+});
+
+function pillClassFor(value) {
+    if (!value) return 'other';
+    if (value.startsWith('OK')) return 'ok';
+    if (value.startsWith('FAILED')) return 'failed';
+    if (value.startsWith('SKIPPED')) return 'skipped';
+    return 'other';
+}
+
+function buildStandaloneHtmlReport(report) {
+    const generatedAt = new Date().toString();
+    const meta = report.meta || {};
+    const devices = report.devices || [];
+
+    const deviceCardsHtml = devices.map(dev => {
+        const cmdHtml = (dev.commands || []).map(c => `
+            <div class="cmd-block">
+                <div class="cmd-line">${c.auto ? '⚙ (auto) ' : ''}$ ${escapeHtml(c.command)} ${c.success ? '' : '<span class="tag-fail">FAILED</span>'}</div>
+                <pre>${escapeHtml(c.output || c.error || '(no output)')}</pre>
+            </div>
+        `).join('');
+        const diffHtml = (dev.config_diff && dev.config_diff.length > 0) ? `
+            <div class="diff-section">
+                <div class="cmd-line">📝 Configuration diff (${dev.config_diff.length} line(s) changed):</div>
+                ${dev.config_diff.map(d => `<div class="diffline ${d.type === '+' ? 'add' : 'remove'}">${d.type} ${escapeHtml(d.line)}</div>`).join('')}
+            </div>` : '';
+
+        return `
+        <div class="device-card">
+            <div class="device-title">${escapeHtml(dev.host)}:${escapeHtml(String(dev.port))}</div>
+            <div class="status-row">
+                <span>Ping: <span class="pill ${pillClassFor(dev.ping)}">${escapeHtml(dev.ping)}</span></span>
+                <span>TCP Port: <span class="pill ${pillClassFor(dev.tcp_port)}">${escapeHtml(dev.tcp_port)}</span></span>
+                <span>SSH: <span class="pill ${pillClassFor(dev.ssh)}">${escapeHtml(dev.ssh)}</span></span>
+            </div>
+            <div class="meta-row">Started: ${escapeHtml(dev.started_at || '')} &nbsp;|&nbsp; Finished: ${escapeHtml(dev.finished_at || '')}</div>
+            ${cmdHtml ? `<div class="cmd-section">${cmdHtml}</div>` : ''}
+            ${diffHtml}
+        </div>`;
+    }).join('\n');
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Network Automation Report - ${escapeHtml(generatedAt)}</title>
+<style>
+    :root {
+        --bg: #0f172a; --panel: #1e293b; --panel-light: #273449;
+        --accent: #38bdf8; --text: #e2e8f0; --muted: #94a3b8;
+        --success: #22c55e; --error: #f87171; --warn: #fbbf24; --border: #334155;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #0f172a, #111827); color: var(--text); }
+    .wrap { max-width: 1000px; margin: 0 auto; }
+    h1 { color: var(--accent); font-size: 1.5rem; margin-bottom: 4px; }
+    .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; }
+    .meta-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 0.88rem; color: var(--muted); }
+    .meta-panel b { color: var(--text); }
+    .device-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .device-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+    .status-row { display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.88rem; color: var(--muted); margin-bottom: 6px; }
+    .meta-row { font-size: 0.78rem; color: var(--muted); margin-bottom: 10px; }
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; }
+    .pill.ok { background: rgba(34,197,94,0.18); color: var(--success); }
+    .pill.failed { background: rgba(248,113,113,0.18); color: var(--error); }
+    .pill.skipped, .pill.other { background: rgba(148,163,184,0.18); color: var(--muted); }
+    .cmd-section { border-top: 1px dashed var(--border); margin-top: 10px; padding-top: 10px; }
+    .cmd-block { margin-bottom: 12px; }
+    .cmd-line { font-family: "Consolas", "Courier New", monospace; color: var(--accent); font-size: 0.85rem; margin-bottom: 4px; }
+    .tag-fail { color: var(--error); font-size: 0.7rem; border: 1px solid var(--error); padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
+    pre { background: #05070d; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 0.8rem; color: #d1fae5; max-height: 400px; overflow-y: auto; }
+    .diff-section { border-top: 1px dashed var(--border); margin-top: 10px; padding-top: 10px; }
+    .diffline { font-family: "Consolas", monospace; font-size: 0.78rem; padding: 1px 6px; white-space: pre-wrap; }
+    .diffline.add { color: var(--success); background: rgba(34,197,94,0.08); }
+    .diffline.remove { color: var(--error); background: rgba(248,113,113,0.08); }
+    footer { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <h1>🔌 Network Automation Report</h1>
+    <div class="subtitle">Generated on ${escapeHtml(generatedAt)}</div>
+    <div class="meta-panel">
+        <b>Mode:</b> ${escapeHtml(meta.mode || 'n/a')} &nbsp;|&nbsp;
+        <b>Devices:</b> ${escapeHtml(String(meta.total_devices || devices.length))} &nbsp;|&nbsp;
+        <b>SSH Commands:</b> ${meta.run_ssh ? 'enabled' : 'disabled'} &nbsp;|&nbsp;
+        <b>Config Mode:</b> ${meta.config_mode ? ('⚠ enabled' + (meta.save_config ? ' (saved)' : ' (not saved)')) : 'disabled'} &nbsp;|&nbsp;
+        <b>Started:</b> ${escapeHtml(meta.started_at || '')} &nbsp;|&nbsp;
+        <b>Finished:</b> ${escapeHtml(meta.finished_at || '')}
+    </div>
+    ${deviceCardsHtml || '<p style="color:#94a3b8;">No device data available.</p>'}
+    <footer>Generated locally by the Network Automation Console. No data was sent anywhere to produce this report.</footer>
+</div>
+</body>
+</html>`;
+}
+
+document.getElementById('exportHtmlBtn').addEventListener('click', () => {
+    if (!lastStructuredReport) { setStatus('No structured report available yet — run a task first.', 'error'); return; }
+    downloadBlob(`network_report_${timestampForFilename()}.html`, buildStandaloneHtmlReport(lastStructuredReport), 'text/html');
+});
+document.getElementById('exportJsonBtn').addEventListener('click', () => {
+    if (!lastStructuredReport) { setStatus('No structured report available yet — run a task first.', 'error'); return; }
+    downloadBlob(`network_report_${timestampForFilename()}.json`, JSON.stringify(lastStructuredReport, null, 2), 'application/json');
+});
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+    if (!lastStructuredReport || !lastStructuredReport.devices) { setStatus('No structured report available yet — run a task first.', 'error'); return; }
+    const rows = [['Host', 'Port', 'Ping', 'TCP Port', 'SSH', 'Started At', 'Finished At']];
+    for (const d of lastStructuredReport.devices) rows.push([d.host, d.port, d.ping, d.tcp_port, d.ssh, d.started_at, d.finished_at]);
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    downloadBlob(`network_report_${timestampForFilename()}.csv`, csv, 'text/csv');
+});
+
+// =======================================================================
+// AI Assistant
+// =======================================================================
+const aiProviderSelect = document.getElementById('aiProvider');
+const aiModelInput = document.getElementById('aiModel');
+const aiApiKeyInput = document.getElementById('aiApiKey');
+const aiKeyField = document.getElementById('aiKeyField');
+const aiBaseUrlInput = document.getElementById('aiBaseUrl');
+const aiUrlHint = document.getElementById('aiUrlHint');
+const aiDescriptionInput = document.getElementById('aiDescription');
+const aiSuggestRunBtn = document.getElementById('aiSuggestRunBtn');
+const aiAnalyzeBtn = document.getElementById('aiAnalyzeBtn');
+const aiInsertBtn = document.getElementById('aiInsertBtn');
+const aiResultBox = document.getElementById('aiResultBox');
+const aiStatusLine = document.getElementById('aiStatusLine');
+const aiSuggestBtnTop = document.getElementById('aiSuggestBtn');
+
+const AI_DEFAULTS = {
+    openrouter: { model: 'openai/gpt-4o-mini', hint: 'Default: https://openrouter.ai/api/v1/chat/completions', needsKey: true },
+    nim:        { model: 'meta/llama-3.1-70b-instruct', hint: 'Default: https://integrate.api.nvidia.com/v1/chat/completions', needsKey: true },
+    ollama:     { model: 'llama3', hint: 'Default: http://localhost:11434/api/chat (make sure "ollama serve" is running)', needsKey: false },
+};
+
+function refreshAiProviderUI() {
+    const cfg = AI_DEFAULTS[aiProviderSelect.value];
+    aiModelInput.placeholder = cfg.model;
+    aiUrlHint.textContent = cfg.hint;
+    aiKeyField.style.display = cfg.needsKey ? 'block' : 'none';
+}
+aiProviderSelect.addEventListener('change', refreshAiProviderUI);
+refreshAiProviderUI();
+
+aiSuggestBtnTop.addEventListener('click', () => {
+    document.querySelector('.tab-btn[data-tab="aiTab"]').click();
+    aiDescriptionInput.focus();
+});
+
+function setAiStatus(message, isError) {
+    aiStatusLine.textContent = message || '';
+    aiStatusLine.style.color = isError ? '#f87171' : '#94a3b8';
+}
+
+let lastSuggestedCommands = [];
+
+async function callAiAssist(mode, extra) {
+    const body = {
+        mode: mode, provider: aiProviderSelect.value,
+        api_key: aiApiKeyInput.value.trim(), base_url: aiBaseUrlInput.value.trim(),
+        model: aiModelInput.value.trim(), ...extra,
+    };
+    const res = await fetch('/ai-assist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    let json; try { json = await res.json(); } catch (e) { json = null; }
+    if (!res.ok) throw new Error((json && json.error) ? json.error : `Request failed with status ${res.status}`);
+    return json;
+}
+
+aiSuggestRunBtn.addEventListener('click', async () => {
+    const description = aiDescriptionInput.value.trim();
+    if (!description) { setAiStatus('Please describe what you want to check or configure first.', true); return; }
+    aiSuggestRunBtn.disabled = true; aiSuggestRunBtn.textContent = '⏳ Thinking...';
+    aiInsertBtn.style.display = 'none'; aiResultBox.style.display = 'block'; aiResultBox.textContent = 'Contacting AI provider...';
+    setAiStatus('', false);
+    try {
+        const json = await callAiAssist('suggest_commands', { vendor: vendorSelect.value, description });
+        aiResultBox.textContent = json.result || '(empty response)';
+        lastSuggestedCommands = json.commands || [];
+        if (lastSuggestedCommands.length > 0) aiInsertBtn.style.display = 'inline-block';
+        setAiStatus(`Received ${lastSuggestedCommands.length} suggested command(s).`, false);
+    } catch (err) {
+        aiResultBox.textContent = ''; aiResultBox.style.display = 'none'; setAiStatus(err.message, true);
+    } finally {
+        aiSuggestRunBtn.disabled = false; aiSuggestRunBtn.textContent = '✨ Suggest Commands';
+    }
+});
+
+aiInsertBtn.addEventListener('click', () => {
+    if (lastSuggestedCommands.length === 0) return;
+    const existing = commandsBox.value.trim();
+    commandsBox.value = existing ? existing + '\n' + lastSuggestedCommands.join('\n') : lastSuggestedCommands.join('\n');
+    setAiStatus('Inserted into the commands box on the left.', false);
+});
+
+aiAnalyzeBtn.addEventListener('click', async () => {
+    const context = output.innerText || '';
+    if (!context.trim()) { setAiStatus('No run output yet — run an automation task first.', true); return; }
+    aiAnalyzeBtn.disabled = true; aiAnalyzeBtn.textContent = '⏳ Analyzing...';
+    aiResultBox.style.display = 'block'; aiResultBox.textContent = 'Contacting AI provider...';
+    setAiStatus('', false);
+    try {
+        const json = await callAiAssist('analyze_output', { context });
+        aiResultBox.textContent = json.result || '(empty response)';
+        setAiStatus('Analysis complete.', false);
+    } catch (err) {
+        aiResultBox.textContent = ''; aiResultBox.style.display = 'none'; setAiStatus(err.message, true);
+    } finally {
+        aiAnalyzeBtn.disabled = false; aiAnalyzeBtn.textContent = '✨ Analyze Last Run';
+    }
+});
+
+// =======================================================================
+// Inventories
+// =======================================================================
+let currentInventoryName = ''; // tracks which inventory (if any) is loaded, so runs/history can reference it
+let allInventoriesCache = [];
+
+const saveInventoryModal = document.getElementById('saveInventoryModal');
+document.getElementById('saveInventoryBtn').addEventListener('click', () => {
+    document.getElementById('inventoryNameInput').value = currentInventoryName || '';
+    document.getElementById('inventoryTagsInput').value = '';
+    document.getElementById('inventoryNotesInput').value = '';
+    document.getElementById('rememberSecretsCheckbox').checked = false;
+    document.getElementById('rememberSecretsHint').textContent = ENCRYPTION_AVAILABLE
+        ? 'Credentials are encrypted at rest using a local key file.'
+        : 'Credential encryption is unavailable in this install — secrets will NOT be saved even if checked.';
+    saveInventoryModal.classList.add('open');
+});
+document.getElementById('cancelSaveInventoryBtn').addEventListener('click', () => saveInventoryModal.classList.remove('open'));
+
+document.getElementById('confirmSaveInventoryBtn').addEventListener('click', async () => {
+    const name = document.getElementById('inventoryNameInput').value.trim();
+    if (!name) { alert('Please enter a name for this inventory.'); return; }
+    const payload = buildPayloadFromForm();
+    delete payload.confirm_config; // never persist a one-time confirmation flag
+    try {
+        const res = await fetch('/inventories', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name, payload,
+                remember_secrets: document.getElementById('rememberSecretsCheckbox').checked,
+                tags: document.getElementById('inventoryTagsInput').value.trim(),
+                notes: document.getElementById('inventoryNotesInput').value.trim(),
+            }),
+        });
+        const json = await res.json();
+        if (!res.ok) { alert(json.error || 'Failed to save inventory.'); return; }
+        saveInventoryModal.classList.remove('open');
+        currentInventoryName = name;
+        setStatus(`Saved inventory "${name}".`, 'success');
+        loadInventories();
+    } catch (err) { alert('Could not reach the backend.'); }
+});
+
+document.getElementById('loadInventoryBtn').addEventListener('click', () => {
+    document.querySelector('.nav-btn[data-view="inventoriesView"]').click();
+});
+
+function renderInventoriesTable(invs, filterText) {
+    const wrap = document.getElementById('inventoriesTableWrap');
+    const term = (filterText || '').toLowerCase();
+    const filtered = term
+        ? invs.filter(inv =>
+            inv.name.toLowerCase().includes(term) ||
+            (inv.tags || '').toLowerCase().includes(term) ||
+            (inv.notes || '').toLowerCase().includes(term))
+        : invs;
+
+    if (invs.length === 0) {
+        wrap.innerHTML = '<span class="empty-placeholder">No saved inventories yet. Use "Save as Inventory" on the Run tab.</span>';
+        return;
+    }
+    if (filtered.length === 0) {
+        wrap.innerHTML = '<span class="empty-placeholder">No inventories match your search.</span>';
+        return;
+    }
+
+    let html = '<table class="data-table"><thead><tr><th></th><th>Name</th><th>Devices</th><th>Tags</th><th>Last Updated</th><th>Actions</th></tr></thead><tbody>';
+    for (const inv of filtered) {
+        const tagsHtml = (inv.tags || '').split(',').map(t => t.trim()).filter(Boolean)
+            .map(t => `<span class="tag-chip">${escapeHtml(t)}</span>`).join(' ');
+        html += `<tr>
+            <td><button type="button" class="fav-star ${inv.favorite ? 'active' : ''}" title="${inv.favorite ? 'Unfavorite' : 'Mark as favorite'}" onclick="toggleInventoryFavorite(${inv.id}, ${!inv.favorite})">${inv.favorite ? '★' : '☆'}</button></td>
+            <td>
+                <div>${escapeHtml(inv.name)}</div>
+                ${inv.notes ? `<div class="hint" style="margin-top:2px;">${escapeHtml(inv.notes)}</div>` : ''}
+            </td>
+            <td>${inv.device_count ?? '—'}</td>
+            <td>${tagsHtml || '<span class="hint">—</span>'}</td>
+            <td>${escapeHtml(inv.updated_at)}</td>
+            <td class="row-actions">
+                <button type="button" class="small-btn" onclick="applyInventory(${inv.id})">📂 Load</button>
+                <button type="button" class="small-btn" onclick="openEditInventoryModal(${inv.id})">✏ Edit</button>
+                <button type="button" class="small-btn" onclick="openDuplicateInventoryModal(${inv.id}, '${escapeHtml(inv.name).replace(/'/g, "\\'")}')">📑 Duplicate</button>
+                <button type="button" class="small-btn" onclick="runInventoryNow(${inv.id})">▶ Run Now</button>
+                <button type="button" class="small-btn danger" onclick="removeInventory(${inv.id}, '${escapeHtml(inv.name).replace(/'/g, "\\'")}')">🗑 Delete</button>
+            </td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+}
+
+async function loadInventories() {
+    const wrap = document.getElementById('inventoriesTableWrap');
+    try {
+        const res = await fetch('/inventories');
+        const json = await res.json();
+        allInventoriesCache = json.inventories || [];
+        document.getElementById('invCount').textContent = allInventoriesCache.length;
+        const searchBox = document.getElementById('inventorySearchInput');
+        renderInventoriesTable(allInventoriesCache, searchBox ? searchBox.value : '');
+    } catch (err) {
+        wrap.innerHTML = '<span class="empty-placeholder">Could not load inventories.</span>';
+    }
+}
+
+document.getElementById('inventorySearchInput').addEventListener('input', (e) => {
+    renderInventoriesTable(allInventoriesCache, e.target.value);
+});
+
+async function toggleInventoryFavorite(id, favorite) {
+    try {
+        await fetch(`/inventories/${id}/favorite`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favorite }),
+        });
+        loadInventories();
+    } catch (err) { alert('Could not reach the backend.'); }
+}
+
+let pendingDuplicateInvId = null;
+function openDuplicateInventoryModal(id, currentName) {
+    pendingDuplicateInvId = id;
+    document.getElementById('duplicateInventoryNameInput').value = `${currentName} (copy)`;
+    document.getElementById('duplicateInventoryModal').classList.add('open');
+}
+document.getElementById('cancelDuplicateInventoryBtn').addEventListener('click', () => {
+    document.getElementById('duplicateInventoryModal').classList.remove('open');
+});
+document.getElementById('confirmDuplicateInventoryBtn').addEventListener('click', async () => {
+    const newName = document.getElementById('duplicateInventoryNameInput').value.trim();
+    if (!newName) { alert('Please enter a name.'); return; }
+    try {
+        const res = await fetch(`/inventories/${pendingDuplicateInvId}/duplicate`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ new_name: newName }),
+        });
+        const json = await res.json();
+        if (!res.ok) { alert(json.error || 'Could not duplicate inventory.'); return; }
+        document.getElementById('duplicateInventoryModal').classList.remove('open');
+        setStatus(`Duplicated inventory as "${newName}".`, 'success');
+        loadInventories();
+    } catch (err) { alert('Could not reach the backend.'); }
+});
+
+// -----------------------------------------------------------------------
+// Inline inventory editing (rename / edit tags-notes / edit device list)
+// -----------------------------------------------------------------------
+let pendingEditInvId = null;
+let editInventoryOriginalData = null;
+
+function editInvAddDeviceRow(host = '', port = 22) {
+    const wrap = document.getElementById('editInventoryDeviceList');
+    const row = document.createElement('div');
+    row.className = 'device-row';
+    row.style.gridTemplateColumns = '1fr 90px 34px';
+    row.innerHTML = `
+        <input type="text" class="edit-inv-host" placeholder="Hostname or IP" value="${escapeHtml(host)}">
+        <input type="number" class="edit-inv-port" placeholder="Port" min="1" max="65535" value="${port}">
+        <button type="button" class="remove-btn" title="Remove device">✕</button>
+    `;
+    row.querySelector('.remove-btn').addEventListener('click', () => row.remove());
+    wrap.appendChild(row);
+}
+document.getElementById('editInventoryAddDeviceBtn').addEventListener('click', () => editInvAddDeviceRow());
+
+async function openEditInventoryModal(id) {
+    try {
+        const res = await fetch(`/inventories/${id}`);
+        const inv = await res.json();
+        if (!res.ok) { alert(inv.error || 'Could not load inventory.'); return; }
+        pendingEditInvId = id;
+        editInventoryOriginalData = inv.data;
+        document.getElementById('editInventoryNameInput').value = inv.name;
+        document.getElementById('editInventoryTagsInput').value = inv.tags || '';
+        document.getElementById('editInventoryNotesInput').value = inv.notes || '';
+        const wrap = document.getElementById('editInventoryDeviceList');
+        wrap.innerHTML = '';
+        (inv.data.devices || []).forEach(d => editInvAddDeviceRow(d.host, d.port));
+        if (wrap.children.length === 0) editInvAddDeviceRow();
+        document.getElementById('editInventoryModal').classList.add('open');
+    } catch (err) { alert('Could not reach the backend.'); }
+}
+document.getElementById('cancelEditInventoryBtn').addEventListener('click', () => {
+    document.getElementById('editInventoryModal').classList.remove('open');
+});
+
+document.getElementById('confirmEditInventoryBtn').addEventListener('click', async () => {
+    const name = document.getElementById('editInventoryNameInput').value.trim();
+    if (!name) { alert('Please enter a name.'); return; }
+    const deviceRows = Array.from(document.getElementById('editInventoryDeviceList').querySelectorAll('.device-row'));
+    const devices = deviceRows.map(row => ({
+        host: row.querySelector('.edit-inv-host').value.trim(),
+        port: row.querySelector('.edit-inv-port').value,
+    })).filter(d => d.host !== '');
+    if (devices.length === 0) { alert('Please keep at least one device.'); return; }
+
+    // Preserve everything else from the original saved payload (credentials,
+    // vendor, timeout, etc.) -- this editor only touches the device list.
+    const updatedPayload = { ...editInventoryOriginalData, devices };
+
+    try {
+        const res = await fetch(`/inventories/${pendingEditInvId}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                tags: document.getElementById('editInventoryTagsInput').value.trim(),
+                notes: document.getElementById('editInventoryNotesInput').value.trim(),
+                payload: updatedPayload,
+                remember_secrets: !!(editInventoryOriginalData && editInventoryOriginalData._secrets_remembered),
+            }),
+        });
+        const json = await res.json();
+        if (!res.ok) { alert(json.error || 'Could not save changes.'); return; }
+        document.getElementById('editInventoryModal').classList.remove('open');
+        setStatus(`Updated inventory "${name}".`, 'success');
+        loadInventories();
+    } catch (err) { alert('Could not reach the backend.'); }
+});
+
+async function applyInventory(id) {
+    try {
+        const res = await fetch(`/inventories/${id}`);
+        const inv = await res.json();
+        if (!res.ok) { alert(inv.error || 'Could not load inventory.'); return; }
+        const data = inv.data;
+        setDevices(data.devices);
+        document.getElementById('username').value = data.username || '';
+        document.getElementById('password').value = data.password || '';
+        document.getElementById('private_key_text').value = data.private_key_text || '';
+        document.getElementById('private_key_passphrase').value = data.private_key_passphrase || '';
+        document.getElementById('jump_host').value = data.jump_host || '';
+        document.getElementById('jump_port').value = data.jump_port || 22;
+        document.getElementById('jump_username').value = data.jump_username || '';
+        document.getElementById('jump_password').value = data.jump_password || '';
+        document.getElementById('timeout').value = data.timeout || 10;
+        document.getElementById('max_workers').value = data.max_workers || 5;
+        document.getElementById('parallel').checked = !!data.parallel;
+        document.getElementById('run_ssh').checked = !!data.run_ssh;
+        document.getElementById('commands').value = data.commands || '';
+        if (data.vendor) vendorSelect.value = data.vendor;
+        document.querySelector(`.auth-tab-btn[data-auth="${data.private_key_text ? 'key' : 'password'}"]`).click();
+        currentInventoryName = inv.name;
+        document.querySelector('.nav-btn[data-view="runView"]').click();
+        setStatus(`Loaded inventory "${inv.name}".`, 'success');
+    } catch (err) { alert('Could not reach the backend.'); }
+}
+
+async function runInventoryNow(id) {
+    await applyInventory(id);
+    // Give the DOM a tick to finish applying values, then trigger the run.
+    setTimeout(() => form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true })), 50);
+}
+
+async function removeInventory(id, name) {
+    if (!confirm(`Delete inventory "${name}"? This cannot be undone.`)) return;
+    try {
+        const res = await fetch(`/inventories/${id}`, { method: 'DELETE' });
+        if (!res.ok) { const json = await res.json(); alert(json.error || 'Could not delete.'); return; }
+        loadInventories();
+    } catch (err) { alert('Could not reach the backend.'); }
+}
+
+// =======================================================================
+// Run history
+// =======================================================================
+function renderHistoryStats(stats) {
+    const wrap = document.getElementById('historyStatsRow');
+    if (!stats) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = `
+        <div class="stat-card"><div class="stat-value">${stats.total_runs}</div><div class="stat-label">Total Runs</div></div>
+        <div class="stat-card"><div class="stat-value success-value">${stats.runs_clean}</div><div class="stat-label">Clean Runs</div></div>
+        <div class="stat-card"><div class="stat-value error-value">${stats.runs_with_failures}</div><div class="stat-label">Runs w/ Failures</div></div>
+        <div class="stat-card"><div class="stat-value">${stats.avg_duration_seconds != null ? stats.avg_duration_seconds + 's' : '—'}</div><div class="stat-label">Avg Duration</div></div>
+        <div class="stat-card"><div class="stat-value">${stats.scheduled_runs}</div><div class="stat-label">Scheduled</div></div>
+        <div class="stat-card"><div class="stat-value">${stats.manual_runs}</div><div class="stat-label">Manual</div></div>
+    `;
+}
+
+function formatTrendDayLabel(dayStr) {
+    // dayStr is "YYYY-MM-DD" -- render as short "Mon DD" for compact axis labels.
+    const d = new Date(dayStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return dayStr;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function renderTrendChart(series) {
+    const wrap = document.getElementById('trendChartWrap');
+    if (!series || series.length === 0) {
+        wrap.innerHTML = '<span class="empty-placeholder">No trend data yet.</span>';
+        return;
+    }
+    const maxTotal = Math.max(1, ...series.map(d => d.total));
+    const barMaxHeight = 100; // px, matches .trend-bar-chart height minus label space
+
+    // Only show every Nth label if there are many days, to avoid overlap.
+    const labelStride = series.length > 20 ? Math.ceil(series.length / 15) : 1;
+
+    let html = '<div class="trend-bar-chart">';
+    series.forEach((d, i) => {
+        const okCount = d.total - d.failed;
+        const okHeight = maxTotal > 0 ? Math.round((okCount / maxTotal) * barMaxHeight) : 0;
+        const failHeight = maxTotal > 0 ? Math.round((d.failed / maxTotal) * barMaxHeight) : 0;
+        const showLabel = i % labelStride === 0 || i === series.length - 1;
+        const title = `${d.day}: ${d.total} run(s), ${d.failed} with failures${d.avg_duration != null ? `, avg ${d.avg_duration}s` : ''}`;
+        html += `<div class="trend-bar-col" title="${escapeHtml(title)}">`;
+        if (d.total === 0) {
+            html += '<div class="trend-bar-empty"></div>';
+        } else {
+            html += `<div class="trend-bar-stack">
+                ${d.failed > 0 ? `<div class="trend-bar-fail" style="height:${failHeight}px;"></div>` : ''}
+                ${okCount > 0 ? `<div class="trend-bar-ok" style="height:${okHeight}px;"></div>` : ''}
+            </div>`;
+        }
+        html += `<div class="trend-bar-label">${showLabel ? formatTrendDayLabel(d.day) : ''}</div>`;
+        html += '</div>';
+    });
+    html += '</div>';
+    html += `<div class="trend-legend">
+        <span><span class="dot" style="background:var(--success);"></span> Successful runs</span>
+        <span><span class="dot" style="background:var(--error);"></span> Runs with failures</span>
+    </div>`;
+    wrap.innerHTML = html;
+}
+
+async function loadTrendChart() {
+    const wrap = document.getElementById('trendChartWrap');
+    try {
+        const days = document.getElementById('trendDaysSelect').value;
+        const res = await fetch(`/history/trend?days=${days}`);
+        const json = await res.json();
+        renderTrendChart(json.trend || []);
+    } catch (err) {
+        wrap.innerHTML = '<span class="empty-placeholder">Could not load trend data.</span>';
+    }
+}
+document.getElementById('trendDaysSelect').addEventListener('change', loadTrendChart);
+
+async function loadHistory() {
+    const wrap = document.getElementById('historyTableWrap');
+    try {
+        const search = document.getElementById('historySearchInput').value.trim();
+        const trigger = document.getElementById('historyTriggerFilter').value;
+        const onlyFailed = document.getElementById('historyFailedOnlyCheckbox').checked;
+        const params = new URLSearchParams({ limit: '100' });
+        if (search) params.set('search', search);
+        if (trigger) params.set('triggered_by', trigger);
+        if (onlyFailed) params.set('only_failed', '1');
+
+        const res = await fetch(`/history?${params.toString()}`);
+        const json = await res.json();
+        const runs = json.runs || [];
+        renderHistoryStats(json.stats);
+        document.getElementById('historyCount').textContent = json.stats ? json.stats.total_runs : runs.length;
+        if (runs.length === 0) {
+            wrap.innerHTML = '<span class="empty-placeholder">No runs match your filters.</span>';
+            return;
+        }
+        let html = '<table class="data-table"><thead><tr><th>Started</th><th>Label</th><th>Trigger</th><th>Devices</th><th>Failed</th><th>Duration</th><th>Actions</th></tr></thead><tbody>';
+        for (const r of runs) {
+            html += `<tr>
+                <td>${escapeHtml(r.started_at || '')}</td>
+                <td>${escapeHtml(r.label || '—')}${r.inventory_name ? `<div class="hint">📋 ${escapeHtml(r.inventory_name)}</div>` : ''}</td>
+                <td>${escapeHtml(r.triggered_by)}</td>
+                <td>${r.device_count}</td>
+                <td>${r.failed_count > 0 ? `<span class="status-pill FAILED">${r.failed_count}</span>` : `<span class="status-pill OK">0</span>`}</td>
+                <td>${r.duration_seconds != null ? r.duration_seconds + 's' : '—'}</td>
+                <td class="row-actions">
+                    <button type="button" class="small-btn" onclick="viewHistoryRun(${r.id})">👁 View</button>
+                    <button type="button" class="small-btn" onclick="rerunHistoryRun(${r.id})">🔁 Re-run</button>
+                    <button type="button" class="small-btn" onclick="exportHistoryRunJson(${r.id})">⬇ .json</button>
+                    <button type="button" class="small-btn danger" onclick="removeHistoryRun(${r.id})">🗑 Delete</button>
+                </td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+    } catch (err) {
+        wrap.innerHTML = '<span class="empty-placeholder">Could not load history.</span>';
+    }
+}
+
+document.getElementById('historySearchInput').addEventListener('input', debounce(loadHistory, 300));
+document.getElementById('historyTriggerFilter').addEventListener('change', loadHistory);
+document.getElementById('historyFailedOnlyCheckbox').addEventListener('change', loadHistory);
+
+function debounce(fn, ms) {
+    let timer = null;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), ms);
+    };
+}
+
+async function viewHistoryRun(id) {
+    try {
+        const res = await fetch(`/history/${id}`);
+        const json = await res.json();
+        if (!res.ok) { alert(json.error || 'Could not load run.'); return; }
+        lastStructuredReport = json.report;
+        document.querySelector('.nav-btn[data-view="runView"]').click();
+        document.querySelector('.tab-btn[data-tab="reportTab"]').click();
+        renderStructuredReport(lastStructuredReport);
+        setStatus(`Loaded history run #${id} into the Structured Report tab.`, 'success');
+    } catch (err) { alert('Could not reach the backend.'); }
+}
+
+async function exportHistoryRunJson(id) {
+    try {
+        const res = await fetch(`/history/${id}`);
+        const json = await res.json();
+        if (!res.ok) { alert(json.error || 'Could not load run.'); return; }
+        downloadBlob(`run_${id}_${timestampForFilename()}.json`, JSON.stringify(json.report, null, 2), 'application/json');
+    } catch (err) { alert('Could not reach the backend.'); }
+}
+
+async function rerunHistoryRun(id) {
+    // Re-running a historical run re-uses the DEVICE LIST from that run's
+    // report (host/port only -- credentials are never stored in history),
+    // so the user still needs to supply credentials before it actually runs.
+    try {
+        const res = await fetch(`/history/${id}`);
+        const json = await res.json();
+        if (!res.ok) { alert(json.error || 'Could not load run.'); return; }
+        const devices = (json.report.devices || []).map(d => ({ host: d.host, port: d.port }));
+        if (devices.length === 0) { alert('This run has no device data to re-run.'); return; }
+        setDevices(devices);
+        document.querySelector('.nav-btn[data-view="runView"]').click();
+        setStatus(`Loaded ${devices.length} device(s) from run #${id}. Enter credentials and click "Run Automation" to re-run.`, 'info');
+    } catch (err) { alert('Could not reach the backend.'); }
+}
+
+async function removeHistoryRun(id) {
+    if (!confirm(`Delete run #${id} from history?`)) return;
+    try {
+        const res = await fetch(`/history/${id}`, { method: 'DELETE' });
+        if (!res.ok) { const json = await res.json(); alert(json.error || 'Could not delete.'); return; }
+        loadHistory();
+    } catch (err) { alert('Could not reach the backend.'); }
+}
+
+document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
+    if (!confirm('Delete ALL run history? This cannot be undone.')) return;
+    try {
+        const res = await fetch('/history', { method: 'DELETE' });
+        if (!res.ok) { const json = await res.json(); alert(json.error || 'Could not clear history.'); return; }
+        loadHistory();
+    } catch (err) { alert('Could not reach the backend.'); }
+});
+
+// =======================================================================
+// Schedules
+// =======================================================================
+const newScheduleModal = document.getElementById('newScheduleModal');
+
+function openNewScheduleModal(prefillName) {
+    if (configModeCheckbox.checked) {
+        alert('Config mode cannot be scheduled. Disable "Enable Configuration Mode" before saving this as a scheduled task (schedules are read-only checks only, for safety).');
+        return;
+    }
+    document.getElementById('scheduleNameInput').value = prefillName || '';
+    document.getElementById('scheduleIntervalInput').value = 15;
+    document.getElementById('scheduleNotifyCheckbox').checked = false;
+    newScheduleModal.classList.add('open');
+    document.getElementById('scheduleNameInput').focus();
+}
+
+document.getElementById('newScheduleBtn').addEventListener('click', () => openNewScheduleModal(''));
+
+document.getElementById('saveAsTaskBtn').addEventListener('click', () => {
+    const devices = collectDevices();
+    if (devices.length === 0) {
+        setStatus('Add at least one device before saving this as a scheduled task.', 'error');
+        return;
+    }
+    // Suggest a sensible default name based on the first device, e.g.
+    // "Task: 192.168.1.10 + 2 more" -- easy to rename in the modal anyway.
+    const suggestedName = devices.length === 1
+        ? `Task: ${devices[0].host}`
+        : `Task: ${devices[0].host} + ${devices.length - 1} more`;
+    openNewScheduleModal(suggestedName);
+});
+
+document.getElementById('cancelNewScheduleBtn').addEventListener('click', () => newScheduleModal.classList.remove('open'));
+
+document.getElementById('confirmNewScheduleBtn').addEventListener('click', async () => {
+    const name = document.getElementById('scheduleNameInput').value.trim();
+    const interval = Number(document.getElementById('scheduleIntervalInput').value);
+    if (!name) { alert('Please enter a name for this schedule.'); return; }
+    if (!Number.isFinite(interval) || interval < 5) { alert('Interval must be at least 5 minutes.'); return; }
+
+    const payload = buildPayloadFromForm();
+    if (payload.config_mode) {
+        alert('Config mode cannot be scheduled. Disable config mode on the Run tab before creating a schedule (schedules are read-only checks only).');
+        return;
+    }
+    delete payload.confirm_config;
+
+    try {
+        const res = await fetch('/schedules', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name, interval_minutes: interval, config: payload,
+                notify_on_failure: document.getElementById('scheduleNotifyCheckbox').checked,
+            }),
+        });
+        const json = await res.json();
+        if (!res.ok) { alert(json.error || 'Failed to create schedule.'); return; }
+        newScheduleModal.classList.remove('open');
+        setStatus(`Saved "${name}" as a scheduled task — running every ${interval} min. See the Schedules tab to manage it.`, 'success');
+        loadSchedules();
+    } catch (err) { alert('Could not reach the backend.'); }
+});
+
+function scheduleStatusPill(s) {
+    if (!s.last_status) return '<span class="status-pill other">Never run</span>';
+    if (s.last_status === 'ok') return '<span class="status-pill OK">OK</span>';
+    if (s.last_status === 'failed') return `<span class="status-pill FAILED" title="${escapeHtml(s.last_failed_devices || '')}">Failed</span>`;
+    return `<span class="status-pill other">${escapeHtml(s.last_status)}</span>`;
+}
+
+async function loadSchedules() {
+    const wrap = document.getElementById('schedulesTableWrap');
+    try {
+        const res = await fetch('/schedules');
+        const json = await res.json();
+        const scheds = json.schedules || [];
+        document.getElementById('schedCount').textContent = scheds.length;
+        if (scheds.length === 0) {
+            wrap.innerHTML = '<span class="empty-placeholder">No schedules yet. Click "+ New Schedule" to create one from the Run tab\'s current settings.</span>';
+            return;
+        }
+        let html = '<table class="data-table"><thead><tr><th>Name</th><th>Every</th><th>Last Run</th><th>Last Status</th><th>Runs</th><th>Next Run</th><th>Enabled</th><th>Actions</th></tr></thead><tbody>';
+        for (const s of scheds) {
+            html += `<tr>
+                <td>${escapeHtml(s.name)}${s.notify_on_failure ? ' <span title="Alerts on failure" style="font-size:0.8rem;">🔔</span>' : ''}</td>
+                <td>${s.interval_minutes} min</td>
+                <td>${escapeHtml(s.last_run_at || 'never')}</td>
+                <td>${scheduleStatusPill(s)}</td>
+                <td>${s.run_count || 0}${s.failure_count ? ` <span class="hint">(${s.failure_count} failed)</span>` : ''}</td>
+                <td>${escapeHtml(s.next_run_at || '—')}</td>
+                <td>
+                    <label class="toggle-switch">
+                        <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleSchedule(${s.id}, this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </td>
+                <td class="row-actions">
+                    <button type="button" class="small-btn" onclick="runScheduleNow(${s.id})">▶ Run Now</button>
+                    <button type="button" class="small-btn" onclick="openScheduleHistory(${s.id}, '${escapeHtml(s.name).replace(/'/g, "\\'")}')">🕓 History</button>
+                    <button type="button" class="small-btn" onclick="openEditScheduleInterval(${s.id}, ${s.interval_minutes})">✏ Interval</button>
+                    <button type="button" class="small-btn danger" onclick="removeSchedule(${s.id})">🗑 Delete</button>
+                </td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+    } catch (err) {
+        wrap.innerHTML = '<span class="empty-placeholder">Could not load schedules.</span>';
+    }
+}
+
+async function openScheduleHistory(id, name) {
+    const modal = document.getElementById('scheduleHistoryModal');
+    document.getElementById('scheduleHistoryTitle').textContent = `🕓 Run History — ${name}`;
+    document.getElementById('scheduleHistoryBody').innerHTML = '<span class="empty-placeholder">Loading...</span>';
+    modal.classList.add('open');
+    try {
+        const res = await fetch(`/schedules/${id}/history?limit=50`);
+        const json = await res.json();
+        if (!res.ok) {
+            document.getElementById('scheduleHistoryBody').innerHTML = `<span class="empty-placeholder">${escapeHtml(json.error || 'Could not load history.')}</span>`;
+            return;
+        }
+        const runs = json.runs || [];
+        if (runs.length === 0) {
+            document.getElementById('scheduleHistoryBody').innerHTML = '<span class="empty-placeholder">This schedule has not run yet.</span>';
+            return;
+        }
+        let html = '<table class="data-table"><thead><tr><th>Started</th><th>Trigger</th><th>Devices</th><th>Failed</th><th>Duration</th><th>Actions</th></tr></thead><tbody>';
+        for (const r of runs) {
+            html += `<tr>
+                <td>${escapeHtml(r.started_at || '')}</td>
+                <td>${escapeHtml(r.triggered_by)}</td>
+                <td>${r.device_count}</td>
+                <td>${r.failed_count > 0 ? `<span class="status-pill FAILED">${r.failed_count}</span>` : `<span class="status-pill OK">0</span>`}</td>
+                <td>${r.duration_seconds != null ? r.duration_seconds + 's' : '—'}</td>
+                <td class="row-actions">
+                    <button type="button" class="small-btn" onclick="viewHistoryRun(${r.id}); document.getElementById('scheduleHistoryModal').classList.remove('open');">👁 View</button>
+                </td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        document.getElementById('scheduleHistoryBody').innerHTML = html;
+    } catch (err) {
+        document.getElementById('scheduleHistoryBody').innerHTML = '<span class="empty-placeholder">Could not reach the backend.</span>';
+    }
+}
+document.getElementById('closeScheduleHistoryBtn').addEventListener('click', () => {
+    document.getElementById('scheduleHistoryModal').classList.remove('open');
+});
+
+async function toggleSchedule(id, enabled) {
+    try {
+        const res = await fetch(`/schedules/${id}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),
+        });
+        if (!res.ok) { const json = await res.json(); alert(json.error || 'Could not update schedule.'); loadSchedules(); }
+    } catch (err) { alert('Could not reach the backend.'); loadSchedules(); }
+}
+
+let pendingEditScheduleId = null;
+function openEditScheduleInterval(id, currentInterval) {
+    pendingEditScheduleId = id;
+    document.getElementById('editScheduleIntervalInput').value = currentInterval;
+    document.getElementById('editScheduleIntervalModal').classList.add('open');
+}
+document.getElementById('cancelEditScheduleIntervalBtn').addEventListener('click', () => {
+    document.getElementById('editScheduleIntervalModal').classList.remove('open');
+});
+document.getElementById('confirmEditScheduleIntervalBtn').addEventListener('click', async () => {
+    const interval = Number(document.getElementById('editScheduleIntervalInput').value);
+    if (!Number.isFinite(interval) || interval < 5) { alert('Interval must be at least 5 minutes.'); return; }
+    try {
+        const res = await fetch(`/schedules/${pendingEditScheduleId}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ interval_minutes: interval }),
+        });
+        const json = await res.json();
+        if (!res.ok) { alert(json.error || 'Could not update schedule.'); return; }
+        document.getElementById('editScheduleIntervalModal').classList.remove('open');
+        setStatus('Schedule interval updated.', 'success');
+        loadSchedules();
+    } catch (err) { alert('Could not reach the backend.'); }
+});
+
+async function runScheduleNow(id) {
+    document.querySelector('.nav-btn[data-view="runView"]').click();
+    output.innerHTML = '';
+    setStatus('Running schedule now...', 'info');
+    try {
+        const res = await fetch(`/schedules/${id}/run-now`, { method: 'POST' });
+        if (!res.ok) {
+            const json = await res.json().catch(() => ({}));
+            appendLine('[ERROR] ' + (json.error || 'Failed to run schedule.'));
+            setStatus(json.error || 'Failed to run schedule.', 'error');
+            return;
+        }
+        const text = await res.text();
+        processFullText(text);
+        setStatus('Schedule run finished.', 'success');
+    } catch (err) {
+        setStatus('Could not reach the backend.', 'error');
+    }
+}
+
+async function removeSchedule(id) {
+    if (!confirm('Delete this schedule?')) return;
+    try {
+        const res = await fetch(`/schedules/${id}`, { method: 'DELETE' });
+        if (!res.ok) { const json = await res.json(); alert(json.error || 'Could not delete.'); return; }
+        loadSchedules();
+    } catch (err) { alert('Could not reach the backend.'); }
+}
+
+// Initial background counts for nav badges (without switching views)
+(async function initCounts() {
+    try {
+        const [inv, hist, sched] = await Promise.all([
+            fetch('/inventories').then(r => r.json()),
+            fetch('/history?limit=200').then(r => r.json()),
+            fetch('/schedules').then(r => r.json()),
+        ]);
+        document.getElementById('invCount').textContent = (inv.inventories || []).length;
+        document.getElementById('historyCount').textContent = (hist.runs || []).length;
+        document.getElementById('schedCount').textContent = (sched.schedules || []).length;
+    } catch (err) { /* non-fatal */ }
+})();
+</script>
+</body>
+</html>
