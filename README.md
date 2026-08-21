@@ -29,8 +29,4 @@ Developed by Fowroz, this application merges backend platform configuration with
 3. Run the application:
    ```bash
    python app.py
-
-   <img width="1124" height="747" alt="image" src="https://github.com/user-attachments/assets/edf930c5-86c7-459e-893b-5461538aec24" />
-
-   <img width="1086" height="855" alt="image" src="https://github.com/user-attachments/assets/2ddf23d3-d166-49aa-860e-9b4cd83fa61d" />
-
+   
