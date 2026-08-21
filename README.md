@@ -26,7 +26,8 @@ Developed by Fowroz, this application merges backend platform configuration with
 
 1. Clone the repository.
 2. Ensure you have Python installed.
-3. Run the application:
+3. Install the Libraries (Netmiko,Paramiko,Flask)
+4. Run the application:
    ```bash
    python app.py
    
