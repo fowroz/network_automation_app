@@ -1,0 +1,35 @@
+# ============================================================================
+# Network Automation Console - Python dependencies
+# ============================================================================
+#
+# You normally do NOT need to install these manually -- app.py auto-installs
+# any of these that are missing the first time you run `python app.py`.
+#
+# This file is provided for:
+#   - setting up a virtual environment ahead of time (pip install -r requirements.txt)
+#   - Docker / CI / offline-mirror installs where auto-install isn't desired
+#   - pinning/reviewing exactly what this app depends on
+#
+# Install manually with:
+#   pip install -r requirements.txt
+#
+# ============================================================================
+
+# Core web framework (required) -- serves the UI and all API endpoints.
+Flask>=3.0
+
+# SSH client library (required for SSH/config-mode features) -- used by the
+# app's own execution engine (persistent-shell command execution, config
+# mode, jump-host tunneling, SSH-key auth). If missing, the app still runs;
+# SSH-related features are simply disabled with a clear warning in the UI.
+paramiko>=3.4
+
+# Multi-vendor network device automation library (optional, auto-installed).
+# Not currently used by the app's core execution engine -- it's installed
+# for future extensibility and so /health accurately reports availability.
+netmiko>=4.3
+
+# Credential encryption at rest for saved inventories/schedules (optional).
+# If missing, "remember password" and scheduling features that need stored
+# credentials are disabled; everything else in the app works normally.
+cryptography>=42.0
