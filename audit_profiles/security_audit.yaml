@@ -1,0 +1,76 @@
+# ============================================================================
+# PROFILE: security_audit
+# Purpose: compliance checks -- SSH version, AAA model, banner presence,
+# telnet exposure, password encryption, ACL/local-user counts. Note the
+# `sensitive: true` flag on snmp_ro_community -- its value is REDACTED in
+# every output row (regardless of format) so the report itself never
+# contains the live community string, while still confirming ONE IS SET.
+# ============================================================================
+profile: security_audit
+
+output:
+  format: csv
+  path: ./reports/security_audit_{date}.csv
+  mode: append
+  include_metadata: true
+  on_schema_change: new_file
+
+devices:
+  source: inventory.csv.example
+
+fields:
+  - name: hostname
+    column: HOSTNAME
+    command: show run | i ^hostname
+    regex: 'hostname\s+(\S+)'
+    required: true
+
+  - name: ssh_version
+    column: SSH VERSION
+    command: show ip ssh
+    regex: 'SSH Enabled.*version\s+([\d.]+)'
+    default: 'DISABLED'
+    required: true
+
+  - name: telnet_transport
+    column: TELNET ENABLED ON VTY
+    command: show run | section line vty
+    regex: 'transport input\s+(.*)'
+    default: 'UNKNOWN'
+
+  - name: aaa_new_model
+    column: AAA MODEL ENABLED
+    command: show run | i aaa new-model
+    regex: '(aaa new-model)'
+    default: 'NOT CONFIGURED'
+
+  - name: banner_present
+    column: BANNER PRESENT
+    command: show run | i banner
+    regex: '(banner\s+\S+)'
+    default: 'NO'
+
+  - name: password_encryption
+    column: PASSWORD ENCRYPTION ON
+    command: show run | i service password-encryption
+    regex: '(service password-encryption)'
+    default: 'NO'
+
+  - name: acl_count
+    column: ACL COUNT
+    command: show ip access-lists | i access list
+    regex: '(Standard|Extended) IP access list'
+    occurrence: count
+
+  - name: local_user_count
+    column: LOCAL USER COUNT
+    command: show run | i ^username
+    regex: '^username\s+(\S+)'
+    occurrence: count
+
+  - name: snmp_ro_community
+    column: SNMP RO COMMUNITY SET
+    command: show run | i snmp-server community
+    regex: 'snmp-server community\s+(\S+)\s+RO'
+    default: 'NONE CONFIGURED'
+    sensitive: true

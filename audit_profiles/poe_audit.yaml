@@ -1,0 +1,40 @@
+# ============================================================================
+# PROFILE: poe_audit
+# Purpose: table mode -- ONE ROW PER POWER-OVER-ETHERNET-CAPABLE PORT,
+# showing whether it's currently supplying power, to what class of
+# device, and how close it is to its per-port wattage ceiling. Useful
+# for capacity planning before adding more PoE phones/APs/cameras to a
+# closet switch, and for spotting ports stuck "off" that should be "on"
+# (or vice versa -- a port drawing power that shouldn't be, e.g. an
+# unauthorized device). Requires `textfsm` + `ntc-templates` (lazily
+# imported on first use -- see inventory_collector/textfsm_support.py),
+# same pattern as interface_inventory.yaml / neighbor_discovery.yaml.
+# ============================================================================
+profile: poe_audit
+mode: table
+
+output:
+  format: csv
+  path: ./reports/poe_audit_{date}.csv
+  mode: append
+  include_metadata: false           # table mode rows already carry TARGET_IP/TIMESTAMP
+  on_schema_change: new_file
+
+devices:
+  source: inventory.csv.example
+
+iterate:
+  command: show power inline
+  parser: textfsm
+  row_prefix:
+    - ip
+    - site
+
+columns:                            # columns taken from each parsed TextFSM record
+  - interface
+  - admin_status
+  - operational_status
+  - power
+  - device
+  - class
+  - max

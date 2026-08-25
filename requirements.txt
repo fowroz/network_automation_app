@@ -1,0 +1,57 @@
+# ============================================================================
+# Network Automation Console - Python dependencies
+# ============================================================================
+#
+# You normally do NOT need to install these manually -- app.py auto-installs
+# any of these that are missing the first time you run `python app.py`.
+#
+# This file is provided for:
+#   - setting up a virtual environment ahead of time (pip install -r requirements.txt)
+#   - Docker / CI / offline-mirror installs where auto-install isn't desired
+#   - pinning/reviewing exactly what this app depends on
+#
+# Install manually with:
+#   pip install -r requirements.txt
+#
+# ============================================================================
+
+# Core web framework (required) -- serves the UI and all API endpoints.
+Flask>=3.0
+
+# SSH client library (required for SSH/config-mode features) -- used by the
+# app's own execution engine (persistent-shell command execution, config
+# mode, jump-host tunneling, SSH-key auth). If missing, the app still runs;
+# SSH-related features are simply disabled with a clear warning in the UI.
+paramiko>=3.4
+
+# Multi-vendor network device automation library (optional, auto-installed).
+# Not currently used by the app's core execution engine -- it's installed
+# for future extensibility and so /health accurately reports availability.
+netmiko>=4.3
+
+# Credential encryption at rest for saved inventories/schedules (optional).
+# If missing, "remember password" and scheduling features that need stored
+# credentials are disabled; everything else in the app works normally.
+cryptography>=42.0
+
+# Templating engine for the "Generate dynamic configurations" feature
+# (VLAN creation, bulk interface config, static routes, custom templates).
+# Optional -- if missing, the Templates tab is disabled with a clear
+# message; everything else in the app works normally. Note: Flask already
+# depends on Jinja2 internally, so in practice this is virtually always
+# already present.
+Jinja2>=3.1
+
+# ----------------------------------------------------------------------
+# Audit tab (read-only inventory/compliance collection) -- powers the
+# vendored inventory_collector/ package + audit_profiles/*.yaml, see
+# audit_bridge.py. Optional as a group: if PyYAML fails to install, only
+# the Audit tab is disabled (AUDIT_AVAILABLE=False); if just
+# textfsm/ntc-templates fail, regex-based Audit Profiles still work fine
+# and only `parser: textfsm` / table-mode profiles (e.g.
+# interface_inventory.yaml) are affected.
+# ----------------------------------------------------------------------
+PyYAML>=6.0
+openpyxl>=3.1        # XLSX output format for Audit Profiles
+textfsm>=1.1          # structured parsing for parser: textfsm / table mode
+ntc-templates>=5.0    # built-in TextFSM template library used by textfsm parsing

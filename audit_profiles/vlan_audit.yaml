@@ -1,0 +1,60 @@
+# ============================================================================
+# PROFILE: vlan_audit
+# Purpose: VLAN inventory/hygiene -- how many VLANs exist, whether the
+# default VLAN 1 is still carrying access ports (a common security/best-
+# practice finding), and whether any VLAN 1002-1005 (Cisco's reserved
+# FDDI/Token Ring VLANs) has been tampered with. Device-mode (one row per
+# device) using plain regex against `show vlan brief` -- no TextFSM
+# dependency required, unlike interface_inventory.yaml's table-mode
+# per-VLAN breakdown (see that profile if you want one row per VLAN
+# instead of a per-device summary).
+# ============================================================================
+profile: vlan_audit
+
+output:
+  format: csv
+  path: ./reports/vlan_audit_{date}.csv
+  mode: append
+  include_metadata: true
+  on_schema_change: new_file
+
+devices:
+  source: inventory.csv.example
+
+fields:
+  - name: hostname
+    column: HOSTNAME
+    command: show run | i ^hostname
+    regex: 'hostname\s+(\S+)'
+    required: true
+
+  - name: total_vlans
+    column: TOTAL VLANS
+    command: show vlan brief
+    regex: '^(\d+)\s+\S+\s+(?:active|act/unsup|suspended)'
+    occurrence: count
+
+  - name: active_vlan_ids
+    column: ACTIVE VLAN IDS
+    command: show vlan brief
+    regex: '^(\d+)\s+\S+\s+active\b'
+    occurrence: join
+    separator: ', '
+
+  - name: vlan1_has_ports
+    column: VLAN1 HAS ACCESS PORTS
+    command: show vlan brief
+    regex: '^1\s+default\s+active\s+(\S.*)$'
+    default: 'NO'
+
+  - name: suspended_vlan_count
+    column: SUSPENDED VLAN COUNT
+    command: show vlan brief
+    regex: '^(\d+)\s+\S+\s+suspended\b'
+    occurrence: count
+
+  - name: vtp_mode
+    column: VTP MODE
+    command: show vtp status
+    regex: 'VTP Operating Mode\s*:\s*(\S+)'
+    default: 'UNKNOWN'

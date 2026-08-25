@@ -1,0 +1,36 @@
+# ============================================================================
+# PROFILE: neighbor_discovery
+# Purpose: table mode -- ONE ROW PER CDP NEIGHBOR instead of one row per
+# device, for building/validating a physical topology map (which port on
+# which device connects to which neighbor) and spotting unexpected/rogue
+# devices showing up on the network. Requires `textfsm` + `ntc-templates`
+# (see interface_inventory.yaml for the other built-in table-mode
+# example) -- lazily imported on first use, see
+# inventory_collector/textfsm_support.py.
+# ============================================================================
+profile: neighbor_discovery
+mode: table
+
+output:
+  format: csv
+  path: ./reports/neighbor_discovery_{date}.csv
+  mode: append
+  include_metadata: false           # table mode rows already carry TARGET_IP/TIMESTAMP
+  on_schema_change: new_file
+
+devices:
+  source: inventory.csv.example
+
+iterate:
+  command: show cdp neighbors
+  parser: textfsm
+  row_prefix:
+    - ip
+    - site
+
+columns:                            # columns taken from each parsed TextFSM record
+  - neighbor_name
+  - local_interface
+  - neighbor_interface
+  - platform
+  - capabilities

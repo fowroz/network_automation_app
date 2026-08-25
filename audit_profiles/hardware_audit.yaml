@@ -1,0 +1,70 @@
+# ============================================================================
+# PROFILE: hardware_audit
+# Purpose: asset/refresh tracking -- model, serial, PID, uptime, config
+# register, and a couple of software identifiers, for lifecycle/EOL
+# planning and hardware refresh budgeting.
+# ============================================================================
+profile: hardware_audit
+
+output:
+  format: csv                       # csv | xlsx | json
+  path: ./reports/hardware_audit_{date}.csv
+  mode: append                      # append | overwrite
+  include_metadata: true            # adds TIMESTAMP, TARGET_IP, STATUS, MISSING_FIELDS, ERROR
+  on_schema_change: new_file        # new_file | expand | error
+
+devices:
+  source: inventory.csv.example     # override with --inventory on the command line
+
+fields:
+  - name: hostname
+    column: HOSTNAME
+    command: show run | i ^hostname
+    regex: 'hostname\s+(\S+)'
+    required: true
+
+  - name: model
+    column: MODEL
+    command: show version
+    regex: '[Cc]isco\s+(\S+)\s+\(.*\)\s+processor'
+    required: true
+
+  - name: pid
+    column: PID
+    command: show inventory
+    regex: 'PID:\s*(\S+)'
+
+  - name: serial_id
+    column: SERIAL ID
+    command: show version
+    regex: 'Processor\s+board\s+ID\s+(\S+)'
+    required: true
+
+  - name: stack_serials
+    column: ALL SERIALS
+    command: show inventory
+    regex: 'SN:\s*(\S+)'
+    occurrence: join
+    separator: '; '
+
+  - name: ios_version
+    column: IOS VERSION
+    command: show version
+    regex: 'Version\s+([^\s,]+)'
+    transform: upper
+
+  - name: uptime
+    column: UPTIME
+    command: show version
+    regex: 'uptime\s+is\s+(.+)'
+
+  - name: config_register
+    column: CONFIG REGISTER
+    command: show version
+    regex: 'Configuration register is\s+(\S+)'
+
+  - name: last_config_change
+    column: LAST CONFIG CHANGE
+    command: show run | i Last configuration change
+    regex: 'change at\s+(.+?)\s+by'
+    default: 'UNKNOWN'

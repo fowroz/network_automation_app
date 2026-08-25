@@ -1,0 +1,70 @@
+# ============================================================================
+# PROFILE: routing_audit
+# Purpose: routing posture/compliance -- which dynamic routing protocols
+# are actually running, default-route presence, total route-table size
+# (a rough proxy for control-plane load), and whether redistribution is
+# configured (often an unintentional routing-loop/leak risk worth
+# tracking over time). Device-mode, regex-only (no TextFSM dependency).
+# ============================================================================
+profile: routing_audit
+
+output:
+  format: csv
+  path: ./reports/routing_audit_{date}.csv
+  mode: append
+  include_metadata: true
+  on_schema_change: new_file
+
+devices:
+  source: inventory.csv.example
+
+fields:
+  - name: hostname
+    column: HOSTNAME
+    command: show run | i ^hostname
+    regex: 'hostname\s+(\S+)'
+    required: true
+
+  - name: ospf_enabled
+    column: OSPF ENABLED
+    command: show ip protocols
+    regex: '(Routing Protocol is "ospf)'
+    default: 'NOT CONFIGURED'
+
+  - name: bgp_enabled
+    column: BGP ENABLED
+    command: show ip protocols
+    regex: '(Routing Protocol is "bgp)'
+    default: 'NOT CONFIGURED'
+
+  - name: eigrp_enabled
+    column: EIGRP ENABLED
+    command: show ip protocols
+    regex: '(Routing Protocol is "eigrp)'
+    default: 'NOT CONFIGURED'
+
+  - name: has_default_route
+    column: HAS DEFAULT ROUTE
+    command: show ip route | i ^S\*|^O\*E2|^B\*
+    regex: '(0\.0\.0\.0/0|^[SOB]\*)'
+    default: 'NO'
+
+  - name: total_routes
+    column: TOTAL ROUTES
+    command: show ip route | count
+    regex: 'match regexp = (\d+)'
+    default: 'N/A'
+
+  - name: redistribution_configured
+    column: REDISTRIBUTION CONFIGURED
+    command: show run | i redistribute
+    regex: '(redistribute.*)'
+    occurrence: join
+    separator: '; '
+    default: 'NONE'
+
+  - name: hsrp_vrrp_configured
+    column: FHRP CONFIGURED
+    command: show run | i standby|vrrp
+    regex: '(standby\s+\d+\s+ip|vrrp\s+\d+\s+ip)'
+    default: 'NONE'

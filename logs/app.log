@@ -1,0 +1,4 @@
+2026-08-24 10:50:16 | INFO     | MainThread     | ======================================================================
+2026-08-24 10:50:16 | INFO     | MainThread     | Logging initialized. Level=INFO  app.log + audit.log in /home/user/network_automation_app/logs
+2026-08-24 10:50:16 | INFO     | MainThread     | ======================================================================
+2026-08-24 10:50:16 | INFO     | Thread-1 (_scheduler_loop) | [SCHEDULER] Background scheduler thread started (checks every 20s for due jobs, max 1 concurrent scheduled job(s), capped at 10 worker(s) each).

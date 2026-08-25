@@ -1,0 +1,72 @@
+# ============================================================================
+# PROFILE: capacity_audit
+# Purpose: performance/headroom checks -- CPU load, memory free, interface
+# error counts, up/down interface counts -- for capacity planning.
+# ============================================================================
+profile: capacity_audit
+
+output:
+  format: csv
+  path: ./reports/capacity_audit_{date}.csv
+  mode: append
+  include_metadata: true
+  on_schema_change: new_file
+
+devices:
+  source: inventory.csv.example
+
+fields:
+  - name: hostname
+    column: HOSTNAME
+    command: show run | i ^hostname
+    regex: 'hostname\s+(\S+)'
+    required: true
+
+  - name: cpu_5sec
+    column: CPU 5SEC %
+    command: show processes cpu | i CPU utilization
+    regex: 'five seconds:\s+(\d+)%'
+    transform: int
+
+  - name: cpu_1min
+    column: CPU 1MIN %
+    command: show processes cpu | i CPU utilization
+    regex: 'one minute:\s+(\d+)%'
+    transform: int
+
+  - name: cpu_5min
+    column: CPU 5MIN %
+    command: show processes cpu | i CPU utilization
+    regex: 'five minutes:\s+(\d+)%'
+    transform: int
+
+  - name: memory_free_bytes
+    column: MEMORY FREE (BYTES)
+    command: show processes memory | i Processor
+    regex: 'Processor\s+Pool\s+Total:\s*\d+\s+Used:\s*\d+\s+Free:\s*(\d+)'
+    transform: int
+    default: 'N/A'
+
+  - name: interface_count
+    column: TOTAL INTERFACES
+    command: show ip interface brief
+    regex: '^(\S+)\s+\S+\s+\S+\s+\S+\s+(?:up|down|administratively down)'
+    occurrence: count
+
+  - name: interfaces_up_count
+    column: INTERFACES UP
+    command: show ip interface brief
+    regex: '^\S+\s+\S+\s+\S+\s+\S+\s+up\s+up'
+    occurrence: count
+
+  - name: interfaces_down_count
+    column: INTERFACES DOWN
+    command: show ip interface brief
+    regex: '^\S+\s+\S+\s+\S+\s+\S+\s+down\s+down'
+    occurrence: count
+
+  - name: crc_error_lines
+    column: CRC ERROR LINES
+    command: show interfaces | i CRC
+    regex: '(\d+)\s+CRC'
+    occurrence: count

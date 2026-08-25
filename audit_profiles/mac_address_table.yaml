@@ -1,0 +1,36 @@
+# ============================================================================
+# PROFILE: mac_address_table
+# Purpose: table mode -- ONE ROW PER LEARNED MAC ADDRESS, for security
+# investigations (spotting an unexpected/rogue MAC on an access port),
+# MAC-flapping troubleshooting, and general L2 forwarding-table
+# visibility. Complements vlan_audit.yaml (VLAN-level hygiene) and
+# neighbor_discovery.yaml (device-level topology) with the finest-
+# grained view: which individual MAC is on which port/VLAN right now.
+# Requires `textfsm` + `ntc-templates` (lazily imported on first use --
+# see inventory_collector/textfsm_support.py).
+# ============================================================================
+profile: mac_address_table
+mode: table
+
+output:
+  format: csv
+  path: ./reports/mac_address_table_{date}.csv
+  mode: append
+  include_metadata: false           # table mode rows already carry TARGET_IP/TIMESTAMP
+  on_schema_change: new_file
+
+devices:
+  source: inventory.csv.example
+
+iterate:
+  command: show mac address-table
+  parser: textfsm
+  row_prefix:
+    - ip
+    - site
+
+columns:                            # columns taken from each parsed TextFSM record
+  - vlan_id
+  - destination_address
+  - type
+  - destination_port

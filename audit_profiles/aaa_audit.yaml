@@ -1,0 +1,72 @@
+# ============================================================================
+# PROFILE: aaa_audit
+# Purpose: dedicated centralized-authentication compliance check --
+# security_audit.yaml only confirms `aaa new-model` is present; this
+# profile drills into WHICH method (TACACS+/RADIUS vs. local-only) is
+# actually driving login/enable authentication, whether a local
+# fallback exists (good -- avoids a total lockout if the AAA servers
+# are unreachable), how many TACACS+/RADIUS servers are configured
+# (single point of failure risk if only one), and whether command
+# accounting is enabled (needed for change-audit trails). Device mode,
+# plain regex against `show run` fragments -- no TextFSM dependency.
+# ============================================================================
+profile: aaa_audit
+
+output:
+  format: csv
+  path: ./reports/aaa_audit_{date}.csv
+  mode: append
+  include_metadata: true
+  on_schema_change: new_file
+
+devices:
+  source: inventory.csv.example
+
+fields:
+  - name: hostname
+    column: HOSTNAME
+    command: show run | i ^hostname
+    regex: 'hostname\s+(\S+)'
+    required: true
+
+  - name: aaa_new_model
+    column: AAA NEW-MODEL ENABLED
+    command: show run | i aaa new-model
+    regex: '(aaa new-model)'
+    default: 'NOT CONFIGURED'
+
+  - name: login_method
+    column: LOGIN AUTHENTICATION METHOD
+    command: show run | i aaa authentication login default
+    regex: 'aaa authentication login default\s+(.*)'
+    default: 'NOT CONFIGURED (local only)'
+
+  - name: enable_method
+    column: ENABLE AUTHENTICATION METHOD
+    command: show run | i aaa authentication enable default
+    regex: 'aaa authentication enable default\s+(.*)'
+    default: 'NOT CONFIGURED (local only)'
+
+  - name: has_local_fallback
+    column: LOCAL FALLBACK CONFIGURED
+    command: show run | i aaa authentication login default
+    regex: 'aaa authentication login default\s+.*\b(local)\b'
+    default: 'NO'
+
+  - name: tacacs_server_count
+    column: TACACS SERVER COUNT
+    command: show run | i ^tacacs server
+    regex: '^tacacs server\s+\S+'
+    occurrence: count
+
+  - name: radius_server_count
+    column: RADIUS SERVER COUNT
+    command: show run | i ^radius server
+    regex: '^radius server\s+\S+'
+    occurrence: count
+
+  - name: command_accounting
+    column: COMMAND ACCOUNTING ENABLED
+    command: show run | i aaa accounting commands
+    regex: '(aaa accounting commands.*)'
+    default: 'NOT CONFIGURED'

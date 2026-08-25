@@ -1,0 +1,35 @@
+# ============================================================================
+# PROFILE: interface_inventory
+# Purpose: table mode -- ONE ROW PER INTERFACE instead of one row per
+# device. Demonstrates §3.5 of the spec: `mode: table` + an `iterate`
+# block (a single command, parsed via TextFSM into a list of records) +
+# a `columns` list taken from each parsed record, with `row_prefix`
+# columns (usually simple identity fields resolved straight from the
+# inventory row) repeated on every output row so each interface stays
+# attributable to its parent device.
+# ============================================================================
+profile: interface_inventory
+mode: table
+
+output:
+  format: csv
+  path: ./reports/interface_inventory_{date}.csv
+  mode: append
+  include_metadata: false           # table mode rows already carry TARGET_IP/TIMESTAMP
+  on_schema_change: new_file
+
+devices:
+  source: inventory.csv.example
+
+iterate:
+  command: show ip interface brief
+  parser: textfsm                   # produces a list of interface dicts via ntc-templates
+  row_prefix:
+    - ip                            # any inventory column can be used as a row-prefix value
+    - site
+
+columns:                            # columns taken from each parsed TextFSM record
+  - interface
+  - ip_address
+  - status
+  - proto
