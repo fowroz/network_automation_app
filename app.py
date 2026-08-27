@@ -64,6 +64,7 @@ import platform
 import threading
 import time
 import uuid
+import paramiko
 import urllib.request
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor
@@ -118,6 +119,12 @@ if _flask_module is None:
     sys.exit(1)
 
 from flask import Flask, Response, jsonify, render_template, request, send_file, stream_with_context
+
+paramiko.Transport._preferred_kex = (
+    'diffie-hellman-group14-sha1',
+    'diffie-hellman-group-exchange-sha1',
+    'diffie-hellman-group1-sha1',
+)
 
 # paramiko is optional -- only needed for real SSH command execution.
 # We attempt an automatic install; if that fails (e.g. no internet access,
